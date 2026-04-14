@@ -110,6 +110,18 @@ env-check:
 api-docs:
     open http://localhost:8000/api/docs
 
+# ── Git ───────────────────────────────────────────────────────────────────────
+
+# Smart push — auto-generates a meaningful commit message from what changed
+push:
+    bash scripts/push.sh
+
+# Set GitHub remote URL (run once)
+git-remote url:
+    git remote remove origin 2>/dev/null || true
+    git remote add origin {{url}}
+    git push -u origin main
+
 # ── Vercel / Deploy ───────────────────────────────────────────────────────────
 
 # Deploy frontend to Vercel (requires: npm i -g vercel)
