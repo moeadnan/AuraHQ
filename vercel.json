@@ -1,0 +1,16 @@
+{
+  "buildCommand": "next build",
+  "devCommand": "next dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/avatar/generate/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/agents/[id]/chat/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
