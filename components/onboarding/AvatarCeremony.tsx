@@ -120,10 +120,10 @@ export function AvatarCeremony({ avatarUrl, onComplete }: AvatarCeremonyProps) {
       {/* Name appears in silence phase */}
       {showName && (
         <p
-          className="font-display font-light tracking-widest animate-fade-in"
+          className="font-display font-normal tracking-widest animate-fade-in"
           style={{
             fontSize: '22px',
-            color: 'var(--color-surface)',
+            color: 'var(--color-primary)',
             letterSpacing: '0.1em',
           }}
         >

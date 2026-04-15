@@ -4,16 +4,174 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import type { Agent, Profile } from '@/types'
+import type { Agent, Profile, AgentType } from '@/types'
 import { getNodeState, relativeTime } from '@/lib/utils'
 import { AgentSignature } from './AgentSignature'
 import { createClient } from '@/lib/supabase/client'
+import { DOMAINS, DOMAIN_AGENTS } from '@/lib/agents/definitions'
+
+// Agent-specific filter + frame shape so the same face reads differently per role
+const AGENT_STYLES: Record<AgentType, {
+  filter: string
+  borderRadius: string
+  borderColor: string
+  shadow?: string
+}> = {
+  Manuscript: { filter: 'sepia(0.28) contrast(1.08) brightness(0.95)', borderRadius: '5px', borderColor: 'rgba(92,74,56,0.45)' },
+  Counsel:    { filter: 'grayscale(0.42) contrast(1.22) brightness(0.87)', borderRadius: '1px', borderColor: 'rgba(42,38,32,0.55)', shadow: '2px 2px 0 rgba(42,38,32,0.12)' },
+  Dispatch:   { filter: 'hue-rotate(6deg) saturate(0.78) contrast(1.05)', borderRadius: '7px 1px 7px 1px', borderColor: 'rgba(92,74,56,0.3)' },
+  Ledger:     { filter: 'sepia(0.18) hue-rotate(-5deg) saturate(1.22) brightness(1.03)', borderRadius: '50%', borderColor: 'rgba(184,118,42,0.55)', shadow: '0 0 0 3px rgba(184,118,42,0.1)' },
+  Horizon:    { filter: 'brightness(1.1) saturate(1.32)', borderRadius: '50% 50% 50% 4px', borderColor: 'rgba(204,170,106,0.65)', shadow: '0 4px 14px rgba(204,170,106,0.22)' },
+  Terms:      { filter: 'grayscale(0.52) contrast(1.18) brightness(0.89)', borderRadius: '0px', borderColor: 'rgba(42,38,32,0.5)', shadow: '3px 0 0 rgba(42,38,32,0.12)' },
+  Mirror:     { filter: 'hue-rotate(192deg) saturate(0.18) brightness(1.1) contrast(0.88)', borderRadius: '50%', borderColor: 'rgba(42,38,32,0.22)' },
+  Grain:      { filter: 'grayscale(0.68) contrast(1.12) brightness(0.84) sepia(0.08)', borderRadius: '3px', borderColor: 'rgba(138,126,114,0.45)' },
+  Meridian:   { filter: 'sepia(0.06) saturate(1.4) brightness(1.08)', borderRadius: '50%', borderColor: 'rgba(184,118,42,0.65)', shadow: '0 0 0 4px rgba(184,118,42,0.1), 0 0 0 8px rgba(184,118,42,0.04)' },
+}
+
+const DOMAIN_META: Record<string, { short: string; label: string; color: string }> = {
+  'Work':            { short: 'WORK',   label: 'Work',   color: 'var(--color-secondary)' },
+  'Money':           { short: 'MONEY',  label: 'Money',  color: 'var(--color-principal)' },
+  'Personal Growth': { short: 'GROWTH', label: 'Growth', color: 'var(--color-resolution)' },
+}
+
+const AVATAR_SIZE = 68
 
 interface HQViewProps {
   profile: Profile
   agents: Agent[]
 }
 
+// ── Styled avatar with per-role filter + frame shape ─────────────────────────
+function StyledAvatar({ avatarUrl, name, agentType }: {
+  avatarUrl: string | null
+  name: string
+  agentType: AgentType
+}) {
+  const s = AGENT_STYLES[agentType]
+  return (
+    <div
+      className="relative overflow-hidden flex-shrink-0"
+      style={{
+        width: AVATAR_SIZE,
+        height: AVATAR_SIZE,
+        borderRadius: s.borderRadius,
+        border: `1.5px solid ${s.borderColor}`,
+        boxShadow: s.shadow,
+      }}
+    >
+      {avatarUrl ? (
+        <div style={{ filter: s.filter, position: 'absolute', inset: 0 }}>
+          <Image src={avatarUrl} alt={name} fill className="object-cover" unoptimized />
+        </div>
+      ) : (
+        <div
+          className="absolute inset-0 flex items-center justify-center font-display font-light"
+          style={{ background: 'var(--color-structural)', color: 'var(--color-principal)', filter: s.filter, fontSize: '24px' }}
+        >
+          {name?.[0]?.toUpperCase() || '◈'}
+        </div>
+      )}
+      <div className="absolute bottom-1 right-1" style={{ width: 16, height: 16, opacity: 0.7, pointerEvents: 'none' }}>
+        <AgentSignature agentType={agentType} size={16} />
+      </div>
+    </div>
+  )
+}
+
+// ── Filled agent card ────────────────────────────────────────────────────────
+function FilledCard({ agent, profile }: { agent: Agent; profile: Profile }) {
+  const state = getNodeState(agent.last_used_at)
+  const dotColor =
+    state === 'active' ? 'var(--color-principal)' :
+    state === 'quiet'  ? 'var(--color-text-secondary)' :
+                         'var(--color-structural)'
+  return (
+    <Link href={`/agents/${agent.id}`} className="block group w-full">
+      <div
+        className="flex flex-col items-center py-3 px-3 rounded-lg transition-all duration-200 w-full"
+        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-structural)', boxShadow: 'var(--shadow-surface)' }}
+      >
+        <div className="transition-transform duration-200 group-hover:scale-[1.03]">
+          <StyledAvatar avatarUrl={profile.avatar_url} name={profile.name || 'You'} agentType={agent.agent_type} />
+        </div>
+        <p className="text-center leading-tight mt-2 font-medium truncate w-full"
+          style={{ color: 'var(--color-text-primary)', fontSize: '12px' }}>
+          {agent.name}
+        </p>
+        <div className="flex items-center gap-1 mt-1">
+          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+          <p style={{ color: 'var(--color-text-tertiary)', fontSize: '10px' }}>{relativeTime(agent.last_used_at)}</p>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+// ── Vacancy card ─────────────────────────────────────────────────────────────
+function VacancyCard({ agentType }: { agentType: AgentType }) {
+  const s = AGENT_STYLES[agentType]
+  return (
+    <Link href="/agents/new" className="block group w-full">
+      <div
+        className="flex flex-col items-center py-3 px-3 rounded-lg w-full transition-all duration-200 group-hover:opacity-70"
+        style={{ opacity: 0.42, border: '1px dashed rgba(92,74,56,0.2)' }}
+      >
+        <div className="flex items-center justify-center"
+          style={{ width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: s.borderRadius, border: '1px dashed rgba(92,74,56,0.28)', background: 'rgba(92,74,56,0.04)' }}>
+          <AgentSignature agentType={agentType} size={28} />
+        </div>
+        <p className="text-center leading-tight mt-2 italic truncate w-full"
+          style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
+          {agentType}
+        </p>
+        <p style={{ color: 'var(--color-principal)', fontSize: '10px', marginTop: '3px' }}>+ Appoint</p>
+      </div>
+    </Link>
+  )
+}
+
+// ── Domain column ─────────────────────────────────────────────────────────────
+function DomainColumn({ domain, agents, profile }: { domain: string; agents: Agent[]; profile: Profile }) {
+  const meta = DOMAIN_META[domain]
+  const domainAgents = DOMAIN_AGENTS[domain]
+  const filledInDomain = domainAgents.filter(t => agents.some(a => a.agent_type === t)).length
+
+  return (
+    <div className="flex flex-col items-center">
+      {/* Vertical drop from crossbar */}
+      <div className="w-px h-8" style={{ background: 'var(--color-structural)' }} />
+
+      {/* Domain header node */}
+      <div
+        className="w-full rounded-lg px-3 py-2 text-center"
+        style={{ background: 'var(--color-surface)', border: `1px solid ${meta.color}`, boxShadow: 'var(--shadow-surface)' }}
+      >
+        <p className="font-sans font-medium tracking-widest uppercase"
+          style={{ color: meta.color, fontSize: '10px', letterSpacing: '0.16em' }}>
+          {meta.label}
+        </p>
+        <p style={{ color: 'var(--color-text-tertiary)', fontSize: '10px', marginTop: '2px' }}>
+          {filledInDomain}/{domainAgents.length}
+        </p>
+      </div>
+
+      {/* Agents stacked with connecting lines */}
+      {domainAgents.map((agentType) => {
+        const agent = agents.find(a => a.agent_type === agentType)
+        return (
+          <div key={agentType} className="flex flex-col items-center w-full">
+            <div className="w-px h-5" style={{ background: 'var(--color-structural)' }} />
+            {agent
+              ? <FilledCard agent={agent} profile={profile} />
+              : <VacancyCard agentType={agentType} />}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Main HQ view ─────────────────────────────────────────────────────────────
 export function HQView({ profile, agents }: HQViewProps) {
   const router = useRouter()
   const [signingOut, setSigningOut] = useState(false)
@@ -25,207 +183,79 @@ export function HQView({ profile, agents }: HQViewProps) {
     router.push('/')
   }
 
-  // Build ambient status from agent activity
-  function buildAmbientStatus(): string {
-    if (agents.length === 0) return 'Your HQ is ready. Build your first agent.'
-
-    const sorted = [...agents].sort((a, b) => {
-      if (!a.last_used_at) return 1
-      if (!b.last_used_at) return -1
-      return new Date(b.last_used_at).getTime() - new Date(a.last_used_at).getTime()
-    })
-
-    const active = sorted.find(a => a.last_used_at)
-    const inactive = sorted.find(a => {
-      if (!a.last_used_at) return false
-      const days = (Date.now() - new Date(a.last_used_at).getTime()) / (1000 * 60 * 60 * 24)
-      return days > 7
-    })
-
-    if (active && inactive && active.id !== inactive.id) {
-      return `${active.name} — ${relativeTime(active.last_used_at)}. ${inactive.name} — ${relativeTime(inactive.last_used_at)}.`
-    }
-    if (active) {
-      return `${active.name} — last used ${relativeTime(active.last_used_at)}.`
-    }
-    return 'Your agents are ready. Select one to begin.'
-  }
+  const filledCount = agents.length
 
   return (
-    <div
-      className="min-h-dvh flex flex-col"
-      style={{ background: 'var(--color-ground)' }}
-    >
-      {/* Top bar */}
-      <header className="flex items-center justify-between px-6 pt-6 pb-2">
-        <span
-          className="font-display font-light text-sm tracking-widest"
-          style={{ color: 'var(--color-principal)', letterSpacing: '0.2em' }}
-        >
+    <div className="min-h-dvh flex flex-col" style={{ background: 'var(--color-ground)' }}>
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 pt-6 pb-2 flex-shrink-0">
+        <span className="font-display font-bold text-lg tracking-widest"
+          style={{ color: 'var(--color-principal)', letterSpacing: '0.2em' }}>
           AURA HQ
         </span>
-        <button
-          onClick={handleSignOut}
-          disabled={signingOut}
-          className="text-xs"
-          style={{ color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}
-        >
+        <button onClick={handleSignOut} disabled={signingOut} className="text-xs"
+          style={{ color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}>
           Sign out
         </button>
       </header>
 
-      {/* HQ Structure */}
-      <main className="flex-1 flex flex-col items-center justify-start px-6 pt-10 pb-12">
+      {/* Org chart */}
+      <main className="flex-1 overflow-y-auto px-6 pt-8 pb-16">
+        <div className="max-w-2xl mx-auto">
 
-        {/* Principal node */}
-        <div className="flex flex-col items-center mb-2">
-          <div
-            className="relative rounded-full overflow-hidden mb-3"
-            style={{
-              width: 96,
-              height: 96,
-              boxShadow: '0 0 0 2px var(--color-principal)',
-            }}
-          >
-            {profile.avatar_url ? (
-              <Image
-                src={profile.avatar_url}
-                alt={profile.name || 'You'}
-                fill
-                className="object-cover"
-                priority
-              />
-            ) : (
-              <div
-                className="w-full h-full flex items-center justify-center font-display text-3xl font-light"
-                style={{ background: 'var(--color-structural)', color: 'var(--color-principal)' }}
-              >
-                {profile.name?.[0]?.toUpperCase() || '◈'}
+          {/* ── CEO node ────────────────────────────────────────────────────── */}
+          <div className="flex flex-col items-center">
+            <div className="relative overflow-hidden rounded-full flex-shrink-0"
+              style={{ width: 96, height: 96, boxShadow: '0 0 0 2px var(--color-principal), 0 0 0 6px rgba(184,118,42,0.1)' }}>
+              {profile.avatar_url ? (
+                <Image src={profile.avatar_url} alt={profile.name || 'You'} fill className="object-cover" priority />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center font-display text-4xl font-light"
+                  style={{ background: 'var(--color-structural)', color: 'var(--color-principal)' }}>
+                  {profile.name?.[0]?.toUpperCase() || '◈'}
+                </div>
+              )}
+            </div>
+            <p className="font-display font-normal text-xl mt-3" style={{ color: 'var(--color-primary)' }}>
+              {profile.name}
+            </p>
+            <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-full"
+              style={{ background: 'rgba(184,118,42,0.07)', border: '1px solid rgba(184,118,42,0.16)' }}>
+              <span style={{ color: 'var(--color-principal)', fontSize: '11px', fontWeight: 500 }}>
+                {filledCount === 0 ? '9 positions available' : `${filledCount} of 9 filled`}
+              </span>
+              <div className="flex gap-0.5">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div key={i} className="rounded-full" style={{ width: 4, height: 4, background: i < filledCount ? 'var(--color-principal)' : 'rgba(184,118,42,0.2)' }} />
+                ))}
               </div>
-            )}
+            </div>
           </div>
 
-          <p
-            className="font-display font-light text-principal text-center"
-            style={{ color: 'var(--color-surface)' }}
-          >
-            {profile.name}
-          </p>
+          {/* ── Trunk line ──────────────────────────────────────────────────── */}
+          <div className="flex justify-center">
+            <div className="w-px h-8" style={{ background: 'var(--color-structural)' }} />
+          </div>
 
-          {/* Ambient status */}
-          <p
-            className="text-ambient text-center mt-1 max-w-xs"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            {buildAmbientStatus()}
-          </p>
-        </div>
+          {/* ── Three domain columns with horizontal crossbar ───────────────── */}
+          {/*
+            grid-cols-3 (no gap) means each cell = exactly 1/3 of container.
+            Column centers are at 1/6, 3/6, 5/6 — so crossbar uses left/right = calc(100%/6).
+            Padding within each column gives cards their actual width.
+          */}
+          <div className="relative grid grid-cols-3">
+            {/* Horizontal crossbar connecting the three column stubs */}
+            <div className="absolute top-0 h-px pointer-events-none"
+              style={{ left: 'calc(100% / 6)', right: 'calc(100% / 6)', background: 'var(--color-structural)' }} />
 
-        {/* Connection line from principal */}
-        {agents.length > 0 && (
-          <div
-            className="w-px h-8 my-2"
-            style={{ background: 'var(--color-structural)' }}
-          />
-        )}
-
-        {/* Agent nodes row */}
-        <div className="flex flex-wrap justify-center gap-4 mt-2 max-w-2xl">
-          {agents.map((agent) => {
-            const state = getNodeState(agent.last_used_at)
-            return (
-              <Link key={agent.id} href={`/agents/${agent.id}`}>
-                <div className={`agent-node agent-node--${state} flex flex-col items-center justify-between p-3`}>
-                  {/* Visual signature */}
-                  <div className="flex-1 flex items-center justify-center w-full">
-                    <AgentSignature agentType={agent.agent_type} size={64} />
-                  </div>
-
-                  {/* Agent name */}
-                  <div className="w-full mt-2">
-                    <p
-                      className="text-xs font-medium text-center leading-tight"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      {agent.name}
-                    </p>
-                    <p
-                      className="text-xs text-center mt-0.5"
-                      style={{ color: 'var(--color-text-tertiary)', fontSize: '10px' }}
-                    >
-                      {agent.domain}
-                    </p>
-                  </div>
-
-                  {/* Activity dot */}
-                  {state !== 'incomplete' && (
-                    <div
-                      className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full"
-                      style={{
-                        background:
-                          state === 'active' ? 'var(--color-principal)' :
-                          state === 'quiet' ? 'var(--color-text-secondary)' :
-                          'var(--color-structural)',
-                      }}
-                    />
-                  )}
-                </div>
-              </Link>
-            )
-          })}
-
-          {/* Add agent node */}
-          {agents.length < 4 && (
-            <Link href="/agents/new">
-              <div
-                className="agent-node agent-node--incomplete flex flex-col items-center justify-center gap-2 cursor-pointer"
-                style={{ border: '1px dashed rgba(184, 118, 42, 0.3)' }}
-              >
-                <span
-                  className="text-2xl"
-                  style={{ color: 'var(--color-principal)' }}
-                >
-                  +
-                </span>
-                <span
-                  className="text-xs text-center"
-                  style={{ color: 'var(--color-text-tertiary)' }}
-                >
-                  Add agent
-                </span>
+            {DOMAINS.map(domain => (
+              <div key={domain} className="px-3">
+                <DomainColumn domain={domain} agents={agents} profile={profile} />
               </div>
-            </Link>
-          )}
-        </div>
-
-        {/* Timestamp layer — last used per agent */}
-        {agents.length > 0 && (
-          <div className="mt-8 space-y-1 text-center">
-            {agents.map(a => (
-              <p key={a.id} className="text-ambient" style={{ color: 'var(--color-text-tertiary)' }}>
-                {a.name} · {relativeTime(a.last_used_at)}
-              </p>
             ))}
           </div>
-        )}
 
-        {/* Empty state */}
-        {agents.length === 0 && (
-          <div className="mt-10 text-center max-w-xs">
-            <p
-              className="font-display font-light text-xl mb-2"
-              style={{ color: 'var(--color-surface)' }}
-            >
-              Build your first agent
-            </p>
-            <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-              Each agent you create becomes part of your AI system — scoped, named, and holding your context.
-            </p>
-            <Link href="/agents/new" className="btn-primary">
-              Create an agent
-            </Link>
-          </div>
-        )}
+        </div>
       </main>
     </div>
   )

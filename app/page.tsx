@@ -6,7 +6,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="flex items-center justify-between px-8 py-6">
         <span
-          className="font-display text-xl tracking-widest"
+          className="font-display font-bold text-2xl tracking-widest"
           style={{ color: 'var(--color-principal)', letterSpacing: '0.25em' }}
         >
           AURA HQ
@@ -30,10 +30,10 @@ export default function LandingPage() {
         </p>
 
         <h1
-          className="font-display font-light leading-tight mb-6"
+          className="font-display font-normal leading-tight mb-6"
           style={{
             fontSize: 'clamp(42px, 6vw, 72px)',
-            color: 'var(--color-surface)',
+            color: 'var(--color-primary)',
             letterSpacing: '0.02em',
             lineHeight: 1.15,
           }}
@@ -79,10 +79,10 @@ export default function LandingPage() {
             description: 'Not a conversation box. A visual hierarchy of intelligence organized around your life.',
           },
         ].map((f) => (
-          <div key={f.label} className="p-6 rounded-lg" style={{ background: 'rgba(42, 38, 32, 0.4)', border: '1px solid rgba(42, 38, 32, 0.6)' }}>
+          <div key={f.label} className="p-6 rounded-lg" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-structural)' }}>
             <p
-              className="font-display font-light text-lg mb-2"
-              style={{ color: 'var(--color-surface)', letterSpacing: '0.01em' }}
+              className="font-display font-normal text-lg mb-2"
+              style={{ color: 'var(--color-primary)', letterSpacing: '0.01em' }}
             >
               {f.label}
             </p>

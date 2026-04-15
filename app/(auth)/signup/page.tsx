@@ -45,8 +45,8 @@ export default function SignupPage() {
   return (
     <div>
       <h1
-        className="font-display font-light text-2xl text-center mb-2"
-        style={{ color: 'var(--color-surface)' }}
+        className="font-display font-normal text-2xl text-center mb-2"
+        style={{ color: 'var(--color-primary)' }}
       >
         Begin your HQ
       </h1>

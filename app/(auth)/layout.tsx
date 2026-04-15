@@ -9,7 +9,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="w-full max-w-sm">
         <Link
           href="/"
-          className="block text-center font-display font-light text-lg mb-10 tracking-widest"
+          className="block text-center font-display font-bold text-xl mb-10 tracking-widest"
           style={{ color: 'var(--color-principal)', letterSpacing: '0.25em' }}
         >
           AURA HQ

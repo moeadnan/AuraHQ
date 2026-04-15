@@ -29,6 +29,12 @@ install-backend:
 
 # Run BOTH frontend and backend together (requires: brew install concurrently)
 dev:
+    @echo "→ Clearing Next.js build cache…"
+    @rm -rf .next
+    @echo "→ Freeing ports 3000 and 8000…"
+    @lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    @lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+    @echo "→ Starting dev servers…"
     npx concurrently \
       --names "next,fastapi" \
       --prefix-colors "cyan,magenta" \
@@ -37,6 +43,8 @@ dev:
 
 # Run frontend only
 dev-frontend:
+    @rm -rf .next
+    @lsof -ti:3000 | xargs kill -9 2>/dev/null || true
     npm run dev
 
 # Run backend only

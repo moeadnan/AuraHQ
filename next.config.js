@@ -17,12 +17,16 @@ const nextConfig = {
   },
   // Proxy all /api/* calls to the FastAPI Python backend
   async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/:path*`,
-      },
-    ]
+    return {
+      // afterFiles: checked after filesystem routes, so app/api/* route handlers
+      // take priority and only unmatched paths fall through to FastAPI
+      afterFiles: [
+        {
+          source: '/api/:path*',
+          destination: `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/:path*`,
+        },
+      ],
+    }
   },
 }
 

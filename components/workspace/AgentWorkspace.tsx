@@ -24,7 +24,9 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
   const [activeCapability, setActiveCapability] = useState<string | null>(null)
   const [userInput, setUserInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [memoryExpanded, setMemoryExpanded] = useState(false)
+  const [memoryFullError, setMemoryFullError] = useState(false)
   const [showStructuredPrompt, setShowStructuredPrompt] = useState(false)
   const [structuredI, setStructuredI] = useState('')
   const [structuredAbout, setStructuredAbout] = useState('')
@@ -61,6 +63,7 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
     if (!inputText.trim()) return
 
     setLoading(true)
+    setSubmitError(null)
 
     try {
       const res = await fetch(`/api/agents/${agent.id}/chat`, {
@@ -92,6 +95,7 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
       setShowStructuredPrompt(false)
     } catch (err) {
       console.error(err)
+      setSubmitError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -102,7 +106,8 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
     const content = `From ${card.capability} — ${card.output_text.slice(0, 200)}${card.output_text.length > 200 ? '…' : ''}`
 
     if (memory.length >= 25) {
-      alert('Memory is full (25 items). Delete an item to add more.')
+      setMemoryFullError(true)
+      setTimeout(() => setMemoryFullError(false), 3000)
       return
     }
 
@@ -146,7 +151,7 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
       {/* Fixed header */}
       <header
         className="flex items-center justify-between px-5 py-4 sticky top-0 z-10"
-        style={{ background: 'var(--color-ground)', borderBottom: '1px solid rgba(42, 38, 32, 0.5)' }}
+        style={{ background: 'var(--color-ground)', borderBottom: '1px solid var(--color-structural)' }}
       >
         <div className="flex items-center gap-3">
           <Link
@@ -158,7 +163,7 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
           </Link>
           <AgentSignature agentType={agent.agent_type} size={28} />
           <div>
-            <p className="text-agent-name font-medium leading-tight" style={{ color: 'var(--color-surface)' }}>
+            <p className="text-agent-name font-medium leading-tight" style={{ color: 'var(--color-primary)' }}>
               {agent.name}
             </p>
             <p className="text-xs" style={{ color: 'var(--color-principal-light)' }}>
@@ -252,13 +257,13 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
                 rows={3}
                 className="input-field mb-3"
                 onKeyDown={e => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit()
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() }
                 }}
               />
 
               <div className="flex items-center justify-between">
                 <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                  ⌘↵ to submit
+                  ↵ submit · ⇧↵ new line
                 </span>
                 <button
                   onClick={handleSubmit}
@@ -268,6 +273,9 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
                   {loading ? 'Working…' : 'Submit'}
                 </button>
               </div>
+              {submitError && (
+                <p className="text-xs mt-2" style={{ color: '#c0392b' }}>{submitError}</p>
+              )}
             </>
           ) : (
             // Structured prompt builder (Something else)
@@ -416,17 +424,19 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
       {/* Memory panel */}
       <div
         className="mx-5 mb-6 rounded-lg overflow-hidden"
-        style={{ border: '1px solid rgba(42, 38, 32, 0.4)' }}
+        style={{ border: '1px solid var(--color-structural)' }}
       >
         <button
           onClick={() => setMemoryExpanded(!memoryExpanded)}
           className="w-full flex items-center justify-between px-4 py-3 text-left"
-          style={{ background: 'rgba(42, 38, 32, 0.3)' }}
+          style={{ background: 'var(--color-raised)' }}
         >
           <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             Memory · {memory.length}/25
           </span>
-          {memory.length > 0 && (
+          {memoryFullError ? (
+            <span className="text-xs" style={{ color: '#c0392b' }}>Memory full — delete an item first</span>
+          ) : memory.length > 0 && (
             <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
               {memoryExpanded ? '↑ collapse' : `${memory[0]?.content.slice(0, 50)}…`}
             </span>
@@ -434,7 +444,7 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
         </button>
 
         {memoryExpanded && (
-          <div className="divide-y" style={{ borderColor: 'rgba(42, 38, 32, 0.3)' }}>
+          <div className="divide-y" style={{ borderColor: 'var(--color-structural)' }}>
             {memory.length === 0 ? (
               <p className="px-4 py-3 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
                 No memory items yet. Save a card to build memory.
@@ -444,7 +454,7 @@ export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: A
                 <div
                   key={item.id}
                   className="flex items-start justify-between gap-3 px-4 py-3"
-                  style={{ background: 'rgba(42, 38, 32, 0.2)' }}
+                  style={{ background: 'var(--color-raised)' }}
                 >
                   <p className="text-memory flex-1" style={{ color: 'var(--color-text-secondary)' }}>
                     {item.content}

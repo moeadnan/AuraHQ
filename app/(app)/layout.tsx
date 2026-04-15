@@ -5,7 +5,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) redirect('/login')
+  if (!user) {
+    if (process.env.NODE_ENV !== 'development') redirect('/login')
+    return <>{children}</>
+  }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -13,7 +16,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq('id', user.id)
     .single()
 
-  if (!profile?.onboarding_completed) redirect('/onboarding')
+  if (!profile?.onboarding_completed) {
+    if (process.env.NODE_ENV !== 'development') redirect('/onboarding')
+  }
 
   return <>{children}</>
 }

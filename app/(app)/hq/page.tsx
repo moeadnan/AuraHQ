@@ -6,7 +6,10 @@ import type { Agent, Profile } from '@/types'
 export default async function HQPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) {
+    if (process.env.NODE_ENV !== 'development') redirect('/login')
+    return <HQView profile={{ id: 'dev', name: 'Dev', avatar_url: null, onboarding_completed: true } as Profile} agents={[]} />
+  }
 
   const [{ data: profile }, { data: agents }] = await Promise.all([
     supabase
@@ -23,7 +26,7 @@ export default async function HQPage() {
 
   return (
     <HQView
-      profile={profile as Profile}
+      profile={(profile ?? { id: user.id, name: user.email, avatar_url: null, onboarding_completed: false }) as Profile}
       agents={(agents ?? []) as Agent[]}
     />
   )

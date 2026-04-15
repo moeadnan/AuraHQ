@@ -5,12 +5,21 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+const DEV_EMAIL = 'dev@aurahq.local'
+const DEV_PASSWORD = 'devpass123'
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  async function devLogin(destination: '/onboarding' | '/hq') {
+    const supabase = createClient()
+    await supabase.auth.signInWithPassword({ email: DEV_EMAIL, password: DEV_PASSWORD })
+    router.push(destination)
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -44,23 +53,38 @@ export default function LoginPage() {
 
   return (
     <div className="relative">
-      {/* Skip-to-HQ corner button — dev shortcut */}
-      <button
-        type="button"
-        onClick={() => router.push('/hq')}
-        className="absolute -top-8 -right-2 text-xs px-3 py-1.5 rounded"
-        style={{
-          background: 'rgba(42, 38, 32, 0.6)',
-          border: '1px solid rgba(184, 118, 42, 0.3)',
-          color: 'var(--color-principal-light)',
-          cursor: 'pointer',
-        }}
-      >
-        Enter →
-      </button>
+      {/* Dev shortcuts */}
+      <div className="absolute -top-8 -right-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => devLogin('/onboarding')}
+          className="text-xs px-3 py-1.5 rounded"
+          style={{
+            background: 'var(--color-raised)',
+            border: '1px solid rgba(184, 118, 42, 0.4)',
+            color: 'var(--color-principal)',
+            cursor: 'pointer',
+          }}
+        >
+          Onboarding →
+        </button>
+        <button
+          type="button"
+          onClick={() => devLogin('/hq')}
+          className="text-xs px-3 py-1.5 rounded"
+          style={{
+            background: 'var(--color-raised)',
+            border: '1px solid rgba(184, 118, 42, 0.4)',
+            color: 'var(--color-principal)',
+            cursor: 'pointer',
+          }}
+        >
+          Sign in →
+        </button>
+      </div>
       <h1
-        className="font-display font-light text-2xl text-center mb-2"
-        style={{ color: 'var(--color-surface)' }}
+        className="font-display font-normal text-2xl text-center mb-2"
+        style={{ color: 'var(--color-primary)' }}
       >
         Return to your HQ
       </h1>

@@ -43,11 +43,11 @@ export function AgentSettingsView({ agent }: AgentSettingsViewProps) {
 
   return (
     <div className="min-h-dvh" style={{ background: 'var(--color-ground)' }}>
-      <header className="flex items-center px-5 py-4" style={{ borderBottom: '1px solid rgba(42, 38, 32, 0.5)' }}>
+      <header className="flex items-center px-5 py-4" style={{ borderBottom: '1px solid var(--color-structural)' }}>
         <Link href={`/agents/${agent.id}`} className="text-sm mr-4" style={{ color: 'var(--color-text-tertiary)' }}>
           ← Back
         </Link>
-        <p className="font-medium text-sm" style={{ color: 'var(--color-surface)' }}>
+        <p className="font-medium text-sm" style={{ color: 'var(--color-primary)' }}>
           {agent.name} · Settings
         </p>
       </header>
@@ -90,7 +90,7 @@ export function AgentSettingsView({ agent }: AgentSettingsViewProps) {
         </form>
 
         {/* Danger zone */}
-        <div className="pt-6" style={{ borderTop: '1px solid rgba(42, 38, 32, 0.4)' }}>
+        <div className="pt-6" style={{ borderTop: '1px solid var(--color-structural)' }}>
           <p className="text-xs font-medium mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
             Danger zone
           </p>
@@ -104,7 +104,7 @@ export function AgentSettingsView({ agent }: AgentSettingsViewProps) {
             </button>
           ) : (
             <div>
-              <p className="text-sm mb-3" style={{ color: 'var(--color-surface)' }}>
+              <p className="text-sm mb-3" style={{ color: 'var(--color-text-secondary)' }}>
                 This will delete the agent and all its memory. This cannot be undone.
               </p>
               <div className="flex gap-3">

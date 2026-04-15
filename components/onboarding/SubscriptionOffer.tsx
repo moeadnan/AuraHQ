@@ -37,8 +37,8 @@ export function SubscriptionOffer({
         </div>
 
         <h2
-          className="font-display font-light text-2xl mb-2"
-          style={{ color: 'var(--color-surface)' }}
+          className="font-display font-normal text-2xl mb-2"
+          style={{ color: 'var(--color-primary)' }}
         >
           Your HQ is ready
         </h2>
@@ -49,12 +49,12 @@ export function SubscriptionOffer({
         {/* Pricing card */}
         <div
           className="rounded-lg p-6 mb-6 text-left"
-          style={{ background: 'rgba(42, 38, 32, 0.6)', border: '1px solid rgba(184, 118, 42, 0.2)' }}
+          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-structural)' }}
         >
           <div className="flex items-baseline justify-between mb-4">
             <span
-              className="font-display font-light text-3xl"
-              style={{ color: 'var(--color-surface)' }}
+              className="font-display font-normal text-3xl"
+              style={{ color: 'var(--color-primary)' }}
             >
               $25
             </span>

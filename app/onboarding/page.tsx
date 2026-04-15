@@ -49,6 +49,9 @@ export default function OnboardingPage() {
 
   // Start avatar generation in background after photo is selected
   const generateAvatar = useCallback(async (file: File, capturedCapacityAnswer: string) => {
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+
     const formData = new FormData()
     formData.append('photo', file)
     formData.append('capacityAnswer', capturedCapacityAnswer)
@@ -56,6 +59,9 @@ export default function OnboardingPage() {
     try {
       const res = await fetch('/api/avatar/generate', {
         method: 'POST',
+        headers: session?.access_token
+          ? { 'Authorization': `Bearer ${session.access_token}` }
+          : {},
         body: formData,
       })
 
@@ -111,14 +117,15 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    await supabase.from('profiles').update({
+    await supabase.from('profiles').upsert({
+      id: user.id,
       role,
       support_area: supportArea,
       capacity_answer: capacityAnswer,
       avatar_url: avatarUrl,
       onboarding_completed: true,
       subscription_status: 'trial',
-    }).eq('id', user.id)
+    })
 
     router.push('/hq')
   }
@@ -129,14 +136,15 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    await supabase.from('profiles').update({
+    await supabase.from('profiles').upsert({
+      id: user.id,
       role,
       support_area: supportArea,
       capacity_answer: capacityAnswer,
       avatar_url: avatarUrl,
       onboarding_completed: true,
       subscription_status: 'expired',
-    }).eq('id', user.id)
+    })
 
     router.push('/hq')
   }
@@ -180,8 +188,8 @@ export default function OnboardingPage() {
               1 of 3
             </p>
             <h2
-              className="font-display font-light text-center mb-8"
-              style={{ fontSize: '30px', color: 'var(--color-surface)', letterSpacing: '0.015em', lineHeight: 1.3 }}
+              className="font-display font-normal text-center mb-8"
+              style={{ fontSize: '30px', color: 'var(--color-primary)', letterSpacing: '0.015em', lineHeight: 1.3 }}
             >
               What do you do?
             </h2>
@@ -192,13 +200,13 @@ export default function OnboardingPage() {
                   onClick={() => { setRole(r.value); setStep('q2') }}
                   className="p-4 rounded-lg text-left transition-all"
                   style={{
-                    background: role === r.value ? 'rgba(184, 118, 42, 0.12)' : 'rgba(42, 38, 32, 0.5)',
-                    border: `1px solid ${role === r.value ? 'rgba(184, 118, 42, 0.5)' : 'rgba(42, 38, 32, 0.6)'}`,
-                    color: 'var(--color-surface)',
+                    background: role === r.value ? 'rgba(184, 118, 42, 0.12)' : 'var(--color-surface)',
+                    border: `1px solid ${role === r.value ? 'rgba(184, 118, 42, 0.6)' : 'rgba(92, 74, 56, 0.15)'}`,
+                    color: 'var(--color-primary)',
                   }}
                 >
                   <span className="block text-lg mb-1" style={{ color: 'var(--color-principal)' }}>{r.icon}</span>
-                  <span className="text-sm">{r.value}</span>
+                  <span className="text-sm font-medium">{r.value}</span>
                 </button>
               ))}
             </div>
@@ -215,8 +223,8 @@ export default function OnboardingPage() {
               2 of 3
             </p>
             <h2
-              className="font-display font-light text-center mb-8"
-              style={{ fontSize: '30px', color: 'var(--color-surface)', letterSpacing: '0.015em', lineHeight: 1.3 }}
+              className="font-display font-normal text-center mb-8"
+              style={{ fontSize: '30px', color: 'var(--color-primary)', letterSpacing: '0.015em', lineHeight: 1.3 }}
             >
               Where do you need
               <br />the most support?
@@ -228,9 +236,9 @@ export default function OnboardingPage() {
                   onClick={() => { setSupportArea(a.value); setStep('q3') }}
                   className="p-4 rounded-lg text-left transition-all"
                   style={{
-                    background: 'rgba(42, 38, 32, 0.5)',
-                    border: '1px solid rgba(42, 38, 32, 0.6)',
-                    color: 'var(--color-surface)',
+                    background: 'var(--color-surface)',
+                    border: '1px solid rgba(92, 74, 56, 0.15)',
+                    color: 'var(--color-primary)',
                   }}
                 >
                   <span className="block text-lg mb-1" style={{ color: 'var(--color-principal)' }}>{a.icon}</span>
@@ -251,8 +259,8 @@ export default function OnboardingPage() {
               3 of 3
             </p>
             <h2
-              className="font-display font-light text-center mb-3"
-              style={{ fontSize: '30px', color: 'var(--color-surface)', letterSpacing: '0.015em', lineHeight: 1.3 }}
+              className="font-display font-normal text-center mb-3"
+              style={{ fontSize: '30px', color: 'var(--color-primary)', letterSpacing: '0.015em', lineHeight: 1.3 }}
             >
               What would you do with
               <br />more mental capacity?
@@ -285,8 +293,8 @@ export default function OnboardingPage() {
         {step === 'photo' && (
           <div className="animate-fade-up text-center">
             <h2
-              className="font-display font-light mb-3"
-              style={{ fontSize: '30px', color: 'var(--color-surface)', letterSpacing: '0.015em' }}
+              className="font-display font-normal mb-3"
+              style={{ fontSize: '30px', color: 'var(--color-primary)', letterSpacing: '0.015em' }}
             >
               Place yourself at the top
             </h2>
@@ -310,7 +318,7 @@ export default function OnboardingPage() {
                 onClick={() => fileInputRef.current?.click()}
                 className="w-40 h-40 rounded-full mx-auto flex flex-col items-center justify-center gap-3 mb-8 transition-all"
                 style={{
-                  background: 'rgba(42, 38, 32, 0.5)',
+                  background: 'var(--color-surface)',
                   border: '1px dashed rgba(184, 118, 42, 0.4)',
                   color: 'var(--color-text-tertiary)',
                 }}
@@ -329,7 +337,7 @@ export default function OnboardingPage() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                  style={{ background: 'rgba(22, 16, 10, 0.6)' }}
+                  style={{ background: 'rgba(22, 16, 10, 0.7)' }}
                 >
                   <span className="text-xs" style={{ color: 'var(--color-surface)' }}>Change</span>
                 </button>
@@ -355,7 +363,7 @@ export default function OnboardingPage() {
           <div className="text-center animate-fade-in">
             <div
               className="w-32 h-32 rounded-full mx-auto mb-8 flex items-center justify-center"
-              style={{ background: 'rgba(42, 38, 32, 0.6)', border: '2px solid rgba(184, 118, 42, 0.3)' }}
+              style={{ background: 'var(--color-structural)', border: '2px solid rgba(184, 118, 42, 0.3)' }}
             >
               <span
                 className="font-display font-light text-4xl animate-pulse"
@@ -365,8 +373,8 @@ export default function OnboardingPage() {
               </span>
             </div>
             <p
-              className="font-display font-light text-xl mb-2"
-              style={{ color: 'var(--color-surface)', letterSpacing: '0.02em' }}
+              className="font-display font-normal text-xl mb-2"
+              style={{ color: 'var(--color-primary)', letterSpacing: '0.02em' }}
             >
               Composing your portrait
             </p>
