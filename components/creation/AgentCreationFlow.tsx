@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { DOMAINS, DOMAIN_AGENTS, AGENT_DEFINITIONS } from '@/lib/agents/definitions'
 import { AgentSignature } from '@/components/hq/AgentSignature'
@@ -87,72 +86,6 @@ const SEED_CONTEXT = [
   'So I know where to push and where to tread carefully.',
 ]
 
-// ── Org chart slot ──────────────────────────────────────────────────────────
-
-interface OrgSlotProps {
-  type: AgentType
-  existing: ExistingAgent | undefined
-  isAppointing: boolean
-  previewName: string
-  committedSeeds: number
-  step: Step
-}
-
-function OrgSlot({ type, existing, isAppointing, previewName, committedSeeds, step }: OrgSlotProps) {
-  const displayName = existing?.name ?? (isAppointing ? (previewName || type) : type)
-  // Truncate to ~10 chars to fit the narrow card
-  const shortName = displayName.length > 11 ? displayName.slice(0, 10) + '…' : displayName
-
-  if (existing) {
-    return (
-      <div className="flex flex-col items-center gap-1 rounded-md py-1.5 px-0.5"
-        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-structural)' }}>
-        <AgentSignature agentType={type} size={15} />
-        <span className="text-center leading-tight w-full"
-          style={{ fontSize: '8px', color: 'var(--color-text-primary)', fontWeight: 500 }}>
-          {shortName}
-        </span>
-        <span style={{ color: 'var(--color-principal)', fontSize: '5px', lineHeight: 1 }}>●</span>
-      </div>
-    )
-  }
-
-  if (isAppointing) {
-    const isConfirmed = step === 'confirm'
-    return (
-      <div className="flex flex-col items-center gap-1 rounded-md py-1.5 px-0.5"
-        style={{
-          background: 'rgba(184, 118, 42, 0.07)',
-          border: `1px solid rgba(184, 118, 42, ${isConfirmed ? '0.55' : '0.32'})`,
-          boxShadow: isConfirmed ? '0 0 0 2px rgba(184,118,42,0.1)' : 'none',
-        }}>
-        <AgentSignature agentType={type} size={15} />
-        <span className="text-center leading-tight w-full"
-          style={{ fontSize: '8px', color: 'var(--color-text-primary)', fontWeight: 500 }}>
-          {shortName}
-        </span>
-        <div className="flex gap-0.5">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="w-1 h-1 rounded-full transition-colors"
-              style={{ background: i < committedSeeds ? 'var(--color-principal)' : 'rgba(92,74,56,0.2)' }} />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // Vacant
-  return (
-    <div className="flex flex-col items-center gap-1 rounded-md py-1.5 px-0.5"
-      style={{ border: '1px dashed rgba(92,74,56,0.15)', opacity: 0.38 }}>
-      <AgentSignature agentType={type} size={15} />
-      <span className="text-center leading-tight w-full"
-        style={{ fontSize: '8px', color: 'var(--color-text-tertiary)' }}>
-        {shortName}
-      </span>
-    </div>
-  )
-}
 
 // ── Main component ───────────────────────────────────────────────────────────
 
@@ -479,10 +412,10 @@ export function AgentCreationFlow({ userId, existingAgents, ownerName, ownerAvat
         </span>
       </header>
 
-      {/* Body: two columns */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Body: chat fills full width, config panel overlays from right */}
+      <div className="relative flex flex-1 overflow-hidden">
 
-        {/* ── Left column: chat ─────────────────────────────── */}
+        {/* ── Chat column — always full width ────────────────── */}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
           {/* Live preview strip — appears once agent type is chosen */}
@@ -735,116 +668,157 @@ export function AgentCreationFlow({ userId, existingAgents, ownerName, ownerAvat
           )}
         </div>
 
-        {/* ── Right column: HQ org chart (desktop only) ───── */}
-        <div
-          className="hidden md:flex flex-col w-40 xl:w-44 flex-shrink-0 overflow-y-auto"
-          style={{ borderLeft: '1px solid var(--color-structural)' }}
-        >
-          {/* Sticky org chart header */}
+        {/* ── Agent config panel — slides in from right as overlay ── */}
+        {agentType && def && (
           <div
-            className="px-3 py-2.5 flex items-center flex-shrink-0"
-            style={{ borderBottom: '1px solid var(--color-structural)', position: 'sticky', top: 0, background: 'var(--color-ground)', zIndex: 1 }}
+            key={agentType}
+            className="animate-slide-right hidden md:flex flex-col absolute right-0 top-0 bottom-0 w-72 overflow-hidden"
+            style={{
+              background: 'rgba(245, 239, 229, 0.96)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              borderLeft: '1px solid var(--color-structural)',
+              zIndex: 10,
+            }}
           >
-            <p className="text-xs font-medium tracking-widest uppercase"
-              style={{ color: 'var(--color-text-tertiary)', letterSpacing: '0.15em' }}>
-              Org Chart
-            </p>
-          </div>
-
-          {/* Org chart content */}
-          <div className="flex-1 p-3 space-y-3">
-
-            {/* Owner avatar — prominent at top */}
-            <div className="flex flex-col items-center pt-1 pb-2" style={{ borderBottom: '1px solid var(--color-structural)' }}>
-              <div
-                className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-display"
-                style={{
-                  width: 48,
-                  height: 48,
-                  boxShadow: '0 0 0 2px var(--color-principal)',
-                  background: 'var(--color-structural)',
-                  color: 'var(--color-principal)',
-                  fontSize: '18px',
-                }}
-              >
-                {ownerAvatarUrl ? (
-                  <Image src={ownerAvatarUrl} alt={ownerName || 'You'} width={48} height={48} className="object-cover w-full h-full" unoptimized />
-                ) : (
-                  ownerName?.[0]?.toUpperCase() || '◈'
-                )}
-              </div>
-              {ownerName && (
-                <p className="mt-1.5 text-center font-medium truncate w-full px-1"
-                  style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>
-                  {ownerName.split('@')[0]}
+            {/* Panel header */}
+            <div
+              className="px-5 py-4 flex items-center gap-3 flex-shrink-0"
+              style={{ borderBottom: '1px solid var(--color-structural)' }}
+            >
+              <AgentSignature agentType={agentType} size={40} />
+              <div className="min-w-0 flex-1">
+                <p
+                  className="font-display font-normal leading-tight"
+                  style={{ color: 'var(--color-text-primary)', fontSize: '17px', letterSpacing: '0.01em' }}
+                >
+                  {previewName || agentType}
                 </p>
-              )}
-            </div>
-            {/* Stats */}
-            <div>
-              <div className="flex justify-between items-baseline mb-1.5">
-                <span className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                  {existingAgents.length + (agentType ? 1 : 0)}{' '}
-                  <span style={{ color: 'var(--color-text-tertiary)' }}>of 9 roles</span>
-                </span>
-                <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                  {9 - existingAgents.length - (agentType ? 1 : 0)} vacant
-                </span>
-              </div>
-              {/* Capacity bar */}
-              <div className="flex gap-0.5">
-                {Array.from({ length: 9 }, (_, i) => {
-                  const isFilled = i < existingAgents.length
-                  const isAppointing = agentType !== null && i === existingAgents.length
-                  return (
-                    <div key={i} className="flex-1 h-1.5 rounded-full transition-colors"
-                      style={{
-                        background: isFilled
-                          ? 'var(--color-principal)'
-                          : isAppointing
-                            ? 'rgba(184,118,42,0.4)'
-                            : 'rgba(92,74,56,0.12)',
-                      }} />
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Domain sections */}
-            {DOMAINS.map(d => (
-              <div key={d}>
-                {/* Domain heading */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-medium uppercase flex-shrink-0"
-                    style={{ color: 'var(--color-text-tertiary)', letterSpacing: '0.1em', fontSize: '9px' }}>
-                    {d === 'Personal Growth' ? 'Growth' : d}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span
+                    className="px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{ background: 'rgba(184,118,42,0.10)', color: 'var(--color-principal)', border: '1px solid rgba(184,118,42,0.22)' }}
+                  >
+                    {agentType}
                   </span>
-                  <div className="flex-1 h-px" style={{ background: 'var(--color-structural)' }} />
+                  <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                    {domain}
+                  </span>
                 </div>
+              </div>
+            </div>
 
-                {/* Agent slots — 3-column grid */}
-                <div className="grid grid-cols-3 gap-1">
-                  {DOMAIN_AGENTS[d].map(type => {
-                    const existing = existingAgents.find(a => a.agent_type === type)
-                    const isAppointingThisSlot = agentType === type
+            {/* Panel body */}
+            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
 
+              {/* Mission */}
+              <div>
+                <p className="text-xs font-semibold tracking-widest uppercase mb-2.5"
+                  style={{ color: 'var(--color-text-tertiary)', letterSpacing: '0.16em' }}>
+                  Mission
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{
+                    color: previewPurpose ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)',
+                    fontStyle: previewPurpose ? 'normal' : 'italic',
+                  }}
+                >
+                  {previewPurpose || 'Not defined yet…'}
+                </p>
+              </div>
+
+              {/* Capabilities */}
+              <div>
+                <p className="text-xs font-semibold tracking-widest uppercase mb-2.5"
+                  style={{ color: 'var(--color-text-tertiary)', letterSpacing: '0.16em' }}>
+                  Capabilities
+                </p>
+                <div className="space-y-2">
+                  {def.capabilities.map((cap, i) => (
+                    <div key={cap.key} className="flex items-start gap-2.5">
+                      <div
+                        className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5"
+                        style={{ background: 'var(--color-structural)', fontSize: '10px', color: 'var(--color-principal)', fontWeight: 600 }}
+                      >
+                        {i + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                          {cap.label}
+                        </p>
+                        <p className="text-xs leading-snug mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                          {cap.prompt.split('.')[0]}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Context / Memory seeds */}
+              <div>
+                <p className="text-xs font-semibold tracking-widest uppercase mb-2.5"
+                  style={{ color: 'var(--color-text-tertiary)', letterSpacing: '0.16em' }}>
+                  Context · {committedSeeds}/3
+                </p>
+                <div className="flex gap-1 mb-3">
+                  {[0, 1, 2].map(i => (
+                    <div
+                      key={i}
+                      className="flex-1 h-1 rounded-full transition-colors"
+                      style={{
+                        background: seeds[i]
+                          ? 'var(--color-principal)'
+                          : step === `seed-${i}`
+                            ? 'rgba(184,118,42,0.35)'
+                            : 'var(--color-structural)',
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="space-y-3">
+                  {def.seedingQuestions.map((q, i) => {
+                    const answer = seeds[i]
+                    const isActive = step === `seed-${i}`
+                    const isDone = answer.length > 0
                     return (
-                      <OrgSlot
-                        key={type}
-                        type={type}
-                        existing={existing}
-                        isAppointing={isAppointingThisSlot}
-                        previewName={previewName}
-                        committedSeeds={committedSeeds}
-                        step={step}
-                      />
+                      <div key={i}>
+                        <p
+                          className="text-xs leading-snug"
+                          style={{
+                            color: isDone
+                              ? 'var(--color-text-secondary)'
+                              : isActive
+                                ? 'var(--color-text-primary)'
+                                : 'var(--color-text-tertiary)',
+                            opacity: !isDone && !isActive ? 0.45 : 1,
+                            fontWeight: isActive ? 500 : 400,
+                          }}
+                        >
+                          {q}
+                        </p>
+                        {isDone && (
+                          <p
+                            className="text-xs italic mt-1.5 px-2.5 py-1.5 rounded-lg"
+                            style={{
+                              color: 'var(--color-principal)',
+                              background: 'rgba(184,118,42,0.07)',
+                              borderLeft: '2px solid rgba(184,118,42,0.4)',
+                            }}
+                          >
+                            {answer}
+                          </p>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
               </div>
-            ))}
+
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
     </div>

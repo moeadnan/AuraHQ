@@ -244,6 +244,12 @@ body {
 .animate-slide-up  { animation: slide-up-panel 280ms var(--ease-aura) forwards; }
 .animate-glow-ring { animation: glow-ring 2s ease-in-out infinite; }
 
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-right { animation: slide-in-right 320ms var(--ease-aura) forwards; }
+
 /* ── Avatar ceremony ──────────────────────────────────────────────────────── */
 .ceremony-frame {
   background: var(--color-ground);
