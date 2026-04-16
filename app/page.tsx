@@ -4,7 +4,8 @@ export default function LandingPage() {
   return (
     <main className="min-h-dvh flex flex-col" style={{ background: 'var(--color-ground)' }}>
       {/* Header */}
-      <header className="flex items-center justify-between px-8 py-6">
+      <header className="flex items-center justify-between px-8 py-4"
+        style={{ background: 'var(--color-chrome)', borderBottom: '1px solid var(--color-chrome-border)' }}>
         <span
           className="font-display font-bold text-2xl tracking-widest"
           style={{ color: 'var(--color-principal)', letterSpacing: '0.25em' }}
@@ -14,7 +15,7 @@ export default function LandingPage() {
         <Link
           href="/login"
           className="text-sm"
-          style={{ color: 'var(--color-text-tertiary)' }}
+          style={{ color: 'rgba(255,255,255,0.38)' }}
         >
           Sign in
         </Link>
@@ -30,11 +31,11 @@ export default function LandingPage() {
         </p>
 
         <h1
-          className="font-display font-normal leading-tight mb-6"
+          className="font-display-xl font-light leading-tight mb-6"
           style={{
             fontSize: 'clamp(42px, 6vw, 72px)',
             color: 'var(--color-primary)',
-            letterSpacing: '0.02em',
+            letterSpacing: '0.01em',
             lineHeight: 1.15,
           }}
         >

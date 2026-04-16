@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { AGENT_DEFINITIONS } from '@/lib/agents/definitions'
 import { AgentSignature } from '@/components/hq/AgentSignature'
@@ -13,465 +12,448 @@ interface AgentWorkspaceProps {
   initialMemory: MemoryItem[]
   initialCards: OutputCard[]
   userId: string
+  googleConnected: boolean
 }
 
-export function AgentWorkspace({ agent, initialMemory, initialCards, userId }: AgentWorkspaceProps) {
-  const router = useRouter()
+type ToolStep =
+  | { kind: 'status'; text: string }
+  | { kind: 'tool_start'; tool: string; text: string }
+  | { kind: 'tool_done'; tool: string; text: string }
+
+type ChatMessage = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
+
+function uid() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
+const TOOL_NEEDS_GOOGLE = new Set(['Dispatch', 'Manuscript'])
+
+function MarkdownText({ text }: { text: string }) {
+  // Render **bold**, then newlines
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('**') && part.endsWith('**')
+          ? <strong key={i}>{part.slice(2, -2)}</strong>
+          : part.split('\n').map((line, j, arr) => (
+              <span key={`${i}-${j}`}>
+                {line}
+                {j < arr.length - 1 && <br />}
+              </span>
+            ))
+      )}
+    </>
+  )
+}
+
+export function AgentWorkspace({
+  agent,
+  initialMemory,
+  initialCards,
+  userId,
+  googleConnected,
+}: AgentWorkspaceProps) {
   const def = AGENT_DEFINITIONS[agent.agent_type]
 
+  // Hydrate messages from conversation rows (id, role, content, created_at)
+  const [messages, setMessages] = useState<ChatMessage[]>(
+    (initialCards as unknown as Array<{ id: string; role: string; content: string; created_at: string }>)
+      .filter(r => r.role === 'user' || r.role === 'assistant')
+      .map(r => ({ id: r.id, role: r.role as 'user' | 'assistant', content: r.content, created_at: r.created_at }))
+  )
   const [memory, setMemory] = useState<MemoryItem[]>(initialMemory)
-  const [cards, setCards] = useState<OutputCard[]>(initialCards)
   const [activeCapability, setActiveCapability] = useState<string | null>(null)
   const [userInput, setUserInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [liveSteps, setLiveSteps] = useState<ToolStep[]>([])
+  const [streamingContent, setStreamingContent] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [memoryExpanded, setMemoryExpanded] = useState(false)
-  const [memoryFullError, setMemoryFullError] = useState(false)
-  const [showStructuredPrompt, setShowStructuredPrompt] = useState(false)
-  const [structuredI, setStructuredI] = useState('')
-  const [structuredAbout, setStructuredAbout] = useState('')
-  const [structuredFormat, setStructuredFormat] = useState('draft')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [memoryOpen, setMemoryOpen] = useState(false)
 
-  // Update last_used_at on mount
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  const needsGoogle = TOOL_NEEDS_GOOGLE.has(agent.agent_type)
+  const showConnectBanner = needsGoogle && !googleConnected
+
+  // Mark agent as recently used
   useEffect(() => {
-    const supabase = createClient()
-    supabase
+    createClient()
       .from('agents')
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', agent.id)
       .then(() => {})
   }, [agent.id])
 
+  // Auto-scroll to bottom on new content
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages.length, streamingContent])
+
   function selectCapability(key: string) {
-    if (activeCapability === key) {
-      setActiveCapability(null)
-      setShowStructuredPrompt(false)
-      return
-    }
-    setActiveCapability(key)
-    setShowStructuredPrompt(false)
-    setUserInput('')
-    setTimeout(() => textareaRef.current?.focus(), 150)
+    setActiveCapability(prev => (prev === key ? null : key))
+    setTimeout(() => textareaRef.current?.focus(), 80)
   }
 
   async function handleSubmit() {
-    if (!activeCapability) return
-    const inputText = showStructuredPrompt
-      ? `I want to ${structuredI}${structuredAbout ? ` about ${structuredAbout}` : ''} as a ${structuredFormat}`
-      : userInput
-    if (!inputText.trim()) return
+    const text = userInput.trim()
+    if (!text || loading) return
 
+    const userMsg: ChatMessage = {
+      id: uid(),
+      content: text,
+      created_at: new Date().toISOString(),
+    }
+    setMessages(prev => [...prev, userMsg])
+    setUserInput('')
     setLoading(true)
+    setLiveSteps([])
+    setStreamingContent('')
     setSubmitError(null)
 
     try {
+      const { data: { session } } = await createClient().auth.getSession()
+      const authHeader = session?.access_token
+        ? { 'Authorization': `Bearer ${session.access_token}` }
+        : {}
+
       const res = await fetch(`/api/agents/${agent.id}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          capability: activeCapability,
-          userInput: inputText,
-        }),
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ capability: activeCapability ?? 'auto', user_input: text }),
       })
 
-      if (!res.ok) throw new Error('Chat request failed')
-      const data = await res.json()
+      if (!res.ok || !res.body) throw new Error('Request failed')
 
-      const newCard: OutputCard = {
-        id: data.cardId,
-        agent_id: agent.id,
-        user_id: userId,
-        capability: activeCapability,
-        user_input: inputText,
-        output_text: data.output,
-        saved_to_memory: false,
-        created_at: new Date().toISOString(),
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let outputText = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() ?? ''
+
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue
+          let evt: Record<string, string> | null = null
+          try { evt = JSON.parse(part.slice(6)) } catch { continue }
+          if (!evt) continue
+
+          if (evt.type === 'status') {
+            setLiveSteps(prev => [...prev, { kind: 'status', text: evt!.text }])
+          } else if (evt.type === 'tool_start') {
+            setLiveSteps(prev => [...prev, { kind: 'tool_start', tool: evt!.tool, text: evt!.text }])
+          } else if (evt.type === 'tool_done') {
+            setLiveSteps(prev => {
+              const next = [...prev]
+              const idx = next.findLastIndex(s => s.kind === 'tool_start' && (s as { tool: string }).tool === evt!.tool)
+              if (idx >= 0) next[idx] = { kind: 'tool_done', tool: evt!.tool, text: evt!.text }
+              else next.push({ kind: 'tool_done', tool: evt!.tool, text: evt!.text })
+              return next
+            })
+          } else if (evt.type === 'delta') {
+            outputText = evt.text
+            setStreamingContent(outputText)
+          } else if (evt.type === 'error') {
+            throw new Error(evt.text)
+          }
+        }
       }
 
-      setCards(prev => [newCard, ...prev])
-      setUserInput('')
-      setActiveCapability(null)
-      setShowStructuredPrompt(false)
+      if (outputText) {
+        const assistantMsg: ChatMessage = {
+          id: uid(),
+          role: 'assistant',
+          content: outputText,
+          created_at: new Date().toISOString(),
+        }
+        setMessages(prev => [...prev, assistantMsg])
+      }
     } catch (err) {
       console.error(err)
-      setSubmitError('Something went wrong. Please try again.')
+      setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Try again.')
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function saveToMemory(card: OutputCard) {
-    const supabase = createClient()
-    const content = `From ${card.capability} — ${card.output_text.slice(0, 200)}${card.output_text.length > 200 ? '…' : ''}`
-
-    if (memory.length >= 25) {
-      setMemoryFullError(true)
-      setTimeout(() => setMemoryFullError(false), 3000)
-      return
-    }
-
-    const { data: newItem } = await supabase
-      .from('memory_items')
-      .insert({
-        agent_id: agent.id,
-        user_id: userId,
-        content,
-        source: 'confirmed',
-      })
-      .select()
-      .single()
-
-    if (newItem) {
-      setMemory(prev => [newItem as MemoryItem, ...prev])
-      await supabase
-        .from('output_cards')
-        .update({ saved_to_memory: true })
-        .eq('id', card.id)
-      setCards(prev => prev.map(c => c.id === card.id ? { ...c, saved_to_memory: true } : c))
+      setLiveSteps([])
+      setStreamingContent(null)
+      setActiveCapability(null)
     }
   }
 
   async function deleteMemoryItem(itemId: string) {
-    const supabase = createClient()
-    await supabase.from('memory_items').delete().eq('id', itemId)
+    await createClient().from('memory_items').delete().eq('id', itemId)
     setMemory(prev => prev.filter(m => m.id !== itemId))
   }
 
   const activeCapDef = def.capabilities.find(c => c.key === activeCapability)
-  const relevantMemory = activeCapability
-    ? memory.slice(0, 3) // Show top 3 memory items in input panel
-    : []
 
   return (
-    <div
-      className="min-h-dvh flex flex-col"
-      style={{ background: 'var(--color-ground)' }}
-    >
-      {/* Fixed header */}
+    <div className="h-dvh flex flex-col overflow-hidden" style={{ background: 'var(--color-ground)' }}>
+
+      {/* Chrome header */}
       <header
-        className="flex items-center justify-between px-5 py-4 sticky top-0 z-10"
-        style={{ background: 'var(--color-ground)', borderBottom: '1px solid var(--color-structural)' }}
+        className="flex items-center justify-between px-5 py-3 flex-shrink-0"
+        style={{ background: 'var(--color-chrome)', borderBottom: '1px solid var(--color-chrome-border)' }}
       >
         <div className="flex items-center gap-3">
-          <Link
-            href="/hq"
-            className="text-xs mr-2"
-            style={{ color: 'var(--color-text-tertiary)' }}
-          >
+          <Link href="/hq" className="text-xs mr-1" style={{ color: 'rgba(255,255,255,0.38)' }}>
             ← HQ
           </Link>
-          <AgentSignature agentType={agent.agent_type} size={28} />
+          <AgentSignature agentType={agent.agent_type} size={26} />
           <div>
-            <p className="text-agent-name font-medium leading-tight" style={{ color: 'var(--color-primary)' }}>
+            <p className="font-display text-sm leading-tight" style={{ color: 'var(--color-raised)' }}>
               {agent.name}
             </p>
-            <p className="text-xs" style={{ color: 'var(--color-principal-light)' }}>
+            <p className="text-xs" style={{ color: 'var(--color-principal)', opacity: 0.8 }}>
               {agent.domain}
             </p>
           </div>
         </div>
-        <Link
-          href={`/agents/${agent.id}/settings`}
-          className="text-xs"
-          style={{ color: 'var(--color-text-tertiary)' }}
+        <button
+          onClick={() => setMemoryOpen(o => !o)}
+          className="text-xs px-2.5 py-1 rounded"
+          style={{
+            color: memoryOpen ? 'var(--color-principal)' : 'rgba(255,255,255,0.38)',
+            background: memoryOpen ? 'rgba(200,146,42,0.12)' : 'transparent',
+            border: 'none', cursor: 'pointer',
+          }}
         >
-          ⚙
-        </Link>
+          Memory · {memory.length}
+        </button>
       </header>
 
-      {/* Purpose — always visible */}
-      <div className="px-5 pt-4 pb-3">
-        <p
-          className="text-purpose italic leading-relaxed"
-          style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-sans)' }}
-        >
-          {agent.purpose}
-        </p>
-      </div>
-
-      {/* Capability strip */}
-      <div className="px-5 pb-3 flex flex-wrap gap-2">
-        {def.capabilities.map((cap) => (
-          <button
-            key={cap.key}
-            onClick={() => selectCapability(cap.key)}
-            className={`capability-btn ${activeCapability === cap.key ? 'capability-btn--active' : ''}`}
-          >
-            {cap.label}
-          </button>
-        ))}
-        <button
-          onClick={() => { setActiveCapability('other'); setShowStructuredPrompt(true) }}
-          className={`capability-btn ${activeCapability === 'other' ? 'capability-btn--active' : ''}`}
-        >
-          Something else ↓
-        </button>
-      </div>
-
-      {/* Input panel — expands when capability selected */}
-      {activeCapability && (
-        <div
-          className="mx-5 mb-4 rounded-lg p-4 animate-slide-up"
-          style={{ background: 'var(--color-surface)' }}
-        >
-          {!showStructuredPrompt ? (
-            <>
-              <p
-                className="text-capability font-medium mb-2"
-                style={{ color: 'var(--color-principal)' }}
-              >
-                {activeCapDef?.label ?? activeCapability}
-              </p>
-              <p className="text-xs mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                {activeCapDef?.prompt}
-              </p>
-
-              {/* Memory context */}
-              {relevantMemory.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs mb-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                    Based on what you told me:
-                  </p>
-                  {relevantMemory.map(m => (
-                    <div
-                      key={m.id}
-                      className="text-xs rounded px-2 py-1.5 mb-1"
-                      style={{
-                        background: 'var(--color-raised)',
-                        color: 'var(--color-text-secondary)',
-                        borderLeft: '2px solid rgba(184, 118, 42, 0.3)',
-                      }}
-                    >
-                      {m.content}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <textarea
-                ref={textareaRef}
-                value={userInput}
-                onChange={e => setUserInput(e.target.value)}
-                placeholder="Your input…"
-                rows={3}
-                className="input-field mb-3"
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() }
-                }}
-              />
-
-              <div className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                  ↵ submit · ⇧↵ new line
-                </span>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading || !userInput.trim()}
-                  className="btn-primary text-xs py-2 px-4"
-                >
-                  {loading ? 'Working…' : 'Submit'}
-                </button>
+      {/* Memory drawer */}
+      {memoryOpen && (
+        <div className="flex-shrink-0 border-b" style={{ background: 'var(--color-chrome-deep)', borderColor: 'var(--color-chrome-border)' }}>
+          <div className="px-5 py-3 max-h-48 overflow-y-auto">
+            {memory.length === 0 ? (
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.38)' }}>No memory yet.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {memory.map(item => (
+                  <div key={item.id} className="flex items-start justify-between gap-3">
+                    <p className="text-xs flex-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{item.content}</p>
+                    <button onClick={() => deleteMemoryItem(item.id)} className="text-xs flex-shrink-0"
+                      style={{ color: 'rgba(255,255,255,0.28)', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                  </div>
+                ))}
               </div>
-              {submitError && (
-                <p className="text-xs mt-2" style={{ color: '#c0392b' }}>{submitError}</p>
-              )}
-            </>
-          ) : (
-            // Structured prompt builder (Something else)
-            <>
-              <p
-                className="text-capability font-medium mb-4"
-                style={{ color: 'var(--color-principal)' }}
-              >
-                Build your request
-              </p>
-              <div className="space-y-3 mb-4">
-                <div>
-                  <label className="text-xs mb-1 block" style={{ color: 'var(--color-text-tertiary)' }}>
-                    I want to
-                  </label>
-                  <input
-                    type="text"
-                    value={structuredI}
-                    onChange={e => setStructuredI(e.target.value)}
-                    placeholder="think through, draft, analyze, understand…"
-                    className="input-field text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs mb-1 block" style={{ color: 'var(--color-text-tertiary)' }}>
-                    About (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={structuredAbout}
-                    onChange={e => setStructuredAbout(e.target.value)}
-                    placeholder="the situation, topic, or decision"
-                    className="input-field text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs mb-1 block" style={{ color: 'var(--color-text-tertiary)' }}>
-                    As a
-                  </label>
-                  <select
-                    value={structuredFormat}
-                    onChange={e => setStructuredFormat(e.target.value)}
-                    className="input-field text-sm"
-                  >
-                    {['draft', 'analysis', 'reflection', 'plan', 'response'].map(f => (
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <button
-                  onClick={() => setShowStructuredPrompt(false)}
-                  className="text-xs"
-                  style={{ color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading || !structuredI.trim()}
-                  className="btn-primary text-xs py-2 px-4"
-                >
-                  {loading ? 'Working…' : 'Submit'}
-                </button>
-              </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       )}
 
-      {/* Output cards */}
-      <div className="flex-1 px-5 space-y-4 pb-6">
-        {cards.length === 0 && !activeCapability && (
-          <div className="text-center pt-8">
-            <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-              Select a capability above to begin.
-            </p>
+      {/* Connect Gmail banner */}
+      {showConnectBanner && (
+        <div
+          className="mx-4 mt-3 px-4 py-2.5 rounded-lg flex items-center justify-between gap-4 flex-shrink-0"
+          style={{ background: 'rgba(200,146,42,0.07)', border: '1px solid rgba(200,146,42,0.22)' }}
+        >
+          <p className="text-xs" style={{ color: 'var(--color-secondary)' }}>
+            Connect Gmail to unlock {agent.name}'s full capabilities.
+          </p>
+          <Link href="/settings/connections"
+            className="text-xs font-medium flex-shrink-0 px-3 py-1 rounded-lg"
+            style={{ background: 'var(--color-principal)', color: '#fff' }}>
+            Connect
+          </Link>
+        </div>
+      )}
+
+      {/* Chat thread */}
+      <div className="flex-1 overflow-y-auto px-4 py-5" style={{ scrollBehavior: 'smooth' }}>
+
+        {/* Agent introduction */}
+        <div className="flex items-end gap-2 mb-4">
+          <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
+            style={{ background: 'var(--color-chrome)' }}>
+            <AgentSignature agentType={agent.agent_type} size={16} />
           </div>
-        )}
+          <div className="max-w-sm px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed italic"
+            style={{ background: 'var(--color-surface)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-structural)' }}>
+            {agent.purpose}
+          </div>
+        </div>
 
-        {cards.map((card, i) => (
-          <div
-            key={card.id}
-            className="rounded-lg p-5 animate-fade-up"
-            style={{
-              background: 'var(--color-surface)',
-              animationDelay: `${i * 50}ms`,
-            }}
-          >
-            {/* Card header */}
-            <div className="flex items-center justify-between mb-3">
-              <span
-                className="text-capability font-medium uppercase tracking-wide"
-                style={{ color: 'var(--color-principal)' }}
-              >
-                {card.capability}
-              </span>
-              <span
-                className="text-xs"
-                style={{ color: 'var(--color-text-tertiary)' }}
-              >
-                {new Date(card.created_at).toLocaleDateString()}
-              </span>
-            </div>
-
-            {/* User input summary */}
-            <p
-              className="text-xs mb-3 pb-3"
-              style={{
-                color: 'var(--color-text-tertiary)',
-                borderBottom: '1px solid rgba(92, 74, 56, 0.1)',
-              }}
-            >
-              {card.user_input.length > 80 ? card.user_input.slice(0, 80) + '…' : card.user_input}
-            </p>
-
-            {/* Output */}
-            <div
-              className="text-card-body leading-relaxed whitespace-pre-wrap"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              {card.output_text}
-            </div>
-
-            {/* Card actions */}
-            <div className="flex gap-4 mt-4 pt-3" style={{ borderTop: '1px solid rgba(92, 74, 56, 0.1)' }}>
-              <button
-                onClick={() => !card.saved_to_memory && saveToMemory(card)}
-                disabled={card.saved_to_memory}
-                className="text-xs transition-colors"
-                style={{
-                  color: card.saved_to_memory ? 'var(--color-text-tertiary)' : 'var(--color-principal)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: card.saved_to_memory ? 'default' : 'pointer',
+        {/* Past messages */}
+        {messages.map(msg => (
+          <div key={msg.id} className={`flex items-end gap-2 mb-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+            {msg.role === 'assistant' && (
+              <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
+                style={{ background: 'var(--color-chrome)' }}>
+                <AgentSignature agentType={agent.agent_type} size={16} />
+              </div>
+            )}
+            <div className="group max-w-xs md:max-w-md lg:max-w-lg">
+              <div
+                className="px-4 py-3 rounded-2xl text-sm leading-relaxed"
+                style={msg.role === 'user' ? {
+                  background: 'var(--color-chrome)',
+                  color: 'rgba(255,255,255,0.88)',
+                  borderBottomRightRadius: '4px',
+                } : {
+                  background: 'var(--color-surface)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-structural)',
+                  borderBottomLeftRadius: '4px',
                 }}
               >
-                {card.saved_to_memory ? '✓ Saved to memory' : 'Save to memory'}
-              </button>
+                <MarkdownText text={msg.content} />
+              </div>
             </div>
           </div>
         ))}
-      </div>
 
-      {/* Memory panel */}
-      <div
-        className="mx-5 mb-6 rounded-lg overflow-hidden"
-        style={{ border: '1px solid var(--color-structural)' }}
-      >
-        <button
-          onClick={() => setMemoryExpanded(!memoryExpanded)}
-          className="w-full flex items-center justify-between px-4 py-3 text-left"
-          style={{ background: 'var(--color-raised)' }}
-        >
-          <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-            Memory · {memory.length}/25
-          </span>
-          {memoryFullError ? (
-            <span className="text-xs" style={{ color: '#c0392b' }}>Memory full — delete an item first</span>
-          ) : memory.length > 0 && (
-            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-              {memoryExpanded ? '↑ collapse' : `${memory[0]?.content.slice(0, 50)}…`}
-            </span>
-          )}
-        </button>
-
-        {memoryExpanded && (
-          <div className="divide-y" style={{ borderColor: 'var(--color-structural)' }}>
-            {memory.length === 0 ? (
-              <p className="px-4 py-3 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                No memory items yet. Save a card to build memory.
-              </p>
-            ) : (
-              memory.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-start justify-between gap-3 px-4 py-3"
-                  style={{ background: 'var(--color-raised)' }}
-                >
-                  <p className="text-memory flex-1" style={{ color: 'var(--color-text-secondary)' }}>
-                    {item.content}
-                  </p>
-                  <button
-                    onClick={() => deleteMemoryItem(item.id)}
-                    className="text-xs flex-shrink-0 mt-0.5"
-                    style={{ color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}
-                  >
-                    ×
-                  </button>
+        {/* Live tool steps */}
+        {loading && liveSteps.length > 0 && (
+          <div className="flex items-end gap-2 mb-2">
+            <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
+              style={{ background: 'var(--color-chrome)' }}>
+              <AgentSignature agentType={agent.agent_type} size={16} />
+            </div>
+            <div className="px-4 py-3 rounded-2xl rounded-bl-sm space-y-1.5"
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-structural)' }}>
+              {liveSteps.map((s, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  {s.kind === 'tool_start' && (
+                    <><span style={{ color: 'var(--color-principal)', fontSize: '10px' }}>⟳</span>
+                      <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{s.text}</span></>
+                  )}
+                  {s.kind === 'tool_done' && (
+                    <><span style={{ color: 'var(--color-principal)', fontSize: '10px' }}>✓</span>
+                      <span className="text-xs font-medium" style={{ color: 'var(--color-secondary)' }}>{s.text}</span></>
+                  )}
+                  {s.kind === 'status' && (
+                    <><span style={{ color: 'var(--color-text-tertiary)', fontSize: '10px' }}>●</span>
+                      <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{s.text}</span></>
+                  )}
                 </div>
-              ))
-            )}
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Streaming response */}
+        {streamingContent !== null && (
+          <div className="flex items-end gap-2 mb-3">
+            <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
+              style={{ background: 'var(--color-chrome)' }}>
+              <AgentSignature agentType={agent.agent_type} size={16} />
+            </div>
+            <div className="max-w-xs md:max-w-md lg:max-w-lg px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed"
+              style={{ background: 'var(--color-surface)', color: 'var(--color-text-primary)', border: '1px solid var(--color-structural)' }}>
+              {streamingContent
+                ? <><MarkdownText text={streamingContent} /><span className="inline-block w-0.5 h-4 ml-0.5 align-middle animate-pulse" style={{ background: 'var(--color-principal)' }} /></>
+                : <span className="flex gap-1 items-center py-0.5">
+                    {[0,1,2].map(i => (
+                      <span key={i} className="w-1.5 h-1.5 rounded-full inline-block"
+                        style={{ background: 'var(--color-principal)', opacity: 0.5, animation: `pulse 1.2s ${i * 0.2}s infinite` }} />
+                    ))}
+                  </span>
+              }
+            </div>
+          </div>
+        )}
+
+        {/* Error */}
+        {submitError && (
+          <p className="text-xs text-center py-2" style={{ color: '#b42828' }}>{submitError}</p>
+        )}
+
+        <div ref={bottomRef} />
       </div>
+
+      {/* Input area */}
+      <div className="flex-shrink-0" style={{ background: 'var(--color-raised)', borderTop: '1px solid var(--color-structural)' }}>
+
+        {/* Capability pills */}
+        <div className="px-4 pt-3 flex gap-2 flex-wrap">
+          {def.capabilities.map(cap => (
+            <button
+              key={cap.key}
+              onClick={() => selectCapability(cap.key)}
+              className="text-xs px-3 py-1 rounded-full transition-all"
+              style={{
+                background: activeCapability === cap.key ? 'var(--color-principal)' : 'transparent',
+                color: activeCapability === cap.key ? '#fff' : 'var(--color-text-tertiary)',
+                border: `1px solid ${activeCapability === cap.key ? 'var(--color-principal)' : 'var(--color-structural)'}`,
+                cursor: 'pointer',
+              }}
+            >
+              {cap.label}
+            </button>
+          ))}
+          {activeCapability && (
+            <button onClick={() => setActiveCapability(null)}
+              className="text-xs px-2 py-1 rounded-full"
+              style={{ color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}>
+              ✕ clear
+            </button>
+          )}
+        </div>
+
+        {/* Hint text when capability selected */}
+        {activeCapDef && (
+          <p className="px-4 pt-2 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+            {activeCapDef.prompt}
+          </p>
+        )}
+
+        {/* Input row */}
+        <div className="flex items-end gap-3 px-4 py-3">
+          <textarea
+            ref={textareaRef}
+            value={userInput}
+            onChange={e => {
+              setUserInput(e.target.value)
+              e.target.style.height = 'auto'
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+            }}
+            placeholder={activeCapDef?.prompt ?? 'Message…'}
+            rows={1}
+            className="flex-1 resize-none rounded-xl px-4 py-2.5 text-sm outline-none"
+            style={{
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-structural)',
+              color: 'var(--color-text-primary)',
+              lineHeight: '1.5',
+              maxHeight: '120px',
+              overflow: 'auto',
+            }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() } }}
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={loading || !userInput.trim()}
+            className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center transition-opacity"
+            style={{
+              background: 'var(--color-chrome)',
+              color: '#fff',
+              border: 'none',
+              cursor: loading || !userInput.trim() ? 'default' : 'pointer',
+              opacity: loading || !userInput.trim() ? 0.4 : 1,
+            }}
+          >
+            {loading
+              ? <span className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
+              : <span style={{ fontSize: '14px', lineHeight: 1 }}>↑</span>
+            }
+          </button>
+        </div>
+      </div>
+
     </div>
   )
 }

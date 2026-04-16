@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import settings
-from backend.routers import agents, avatar, memory, profile
+from backend.routers import agents, avatar, memory, profile, connect
 
 # Validate required env vars on startup
 settings.validate_required()
@@ -36,6 +36,7 @@ app.include_router(avatar.router, prefix="/api")
 app.include_router(agents.router, prefix="/api")
 app.include_router(memory.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
+app.include_router(connect.router, prefix="/api")
 
 
 @app.get("/api/health")

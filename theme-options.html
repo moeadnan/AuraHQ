@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AURA HQ — World-Class Typography</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100;0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue-deep:   #001428;
+  --blue-mid:    #001E3C;
+  --blue-raised: #002D58;
+  --blue-border: #003570;
+  --sand-ground: #EDE4D0;
+  --sand-surface:#F5EFE4;
+  --sand-raised: #FDFAF5;
+  --sand-border: #C8BAA4;
+  --ink-dark:    #0A1220;
+  --ink-mid:     #3A4E68;
+  --ink-muted:   #7A8A9A;
+  --gold:        #C8922A;
+  --gold-faint:  rgba(200,146,42,0.10);
+  --gold-border: rgba(200,146,42,0.26);
+  --connector:   rgba(0,53,112,0.18);
+}
+
+body { background: #02060E; padding: 40px 28px 80px; }
+
+/* ── SHARED CHROME ─────────────────────────────────── */
+.page-label { font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: #1A2E44; font-weight: 600; margin-bottom: 6px; }
+.page-rule  { font-family: 'Inter', sans-serif; font-size: 13px; color: #1A3050; line-height: 1.7; max-width: 700px; margin-bottom: 48px; }
+.page-rule strong { color: #C8922A; }
+
+.opt-row { margin-bottom: 60px; }
+.opt-hdr { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid #080E18; }
+.opt-num  { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 800; letter-spacing: 0.2em; color: #C8922A; text-transform: uppercase; }
+.opt-desc { font-family: 'Inter', sans-serif; font-size: 13px; color: #2A4060; line-height: 1.65; max-width: 780px; }
+.opt-desc strong { color: #7AAED4; }
+
+.screens { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+.scr-lbl { font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 0.12em; color: #1A3050; font-weight: 600; text-transform: uppercase; margin-bottom: 9px; }
+
+/* ── PHONE ─────────────────────────────────────────── */
+.phone { width: 300px; border-radius: 20px; overflow: hidden; border: 1px solid rgba(0,53,112,0.3); box-shadow: 0 24px 56px rgba(0,0,0,0.55); flex-shrink: 0; }
+.phone-w { width: 560px; }
+
+/* ── SHELL ATOMS ───────────────────────────────────── */
+.hdr { background: var(--blue-mid); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--blue-border); }
+.hdr-back { font-family: 'Inter', sans-serif; font-size: 11px; color: rgba(255,255,255,0.28); }
+
+.sand { background: var(--sand-ground); }
+.bp  { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+.ceo-wrap { display: flex; flex-direction: column; align-items: center; gap: 7px; padding-bottom: 14px; border-bottom: 1px solid var(--sand-border); }
+.ceo-av   { width: 60px; height: 60px; border-radius: 50%; background: var(--blue-mid); border: 2px solid var(--gold); box-shadow: 0 0 0 5px rgba(200,146,42,0.1); display: flex; align-items: center; justify-content: center; color: var(--gold); }
+.ceo-pill { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; background: var(--gold-faint); border: 1px solid var(--gold-border); }
+.pill-dot { width: 5px; height: 5px; border-radius: 50%; }
+.pill-dots { display: flex; gap: 3px; }
+
+.org-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; position: relative; }
+.org-grid::before { content:''; position:absolute; top:0; left:calc(100%/6); right:calc(100%/6); height:1px; background:var(--connector); }
+.dom-col  { display: flex; flex-direction: column; align-items: center; }
+.dom-drop { width:1px; height:13px; background:var(--connector); }
+.dom-hdr  { width:100%; border-radius:6px; padding:5px 6px; text-align:center; background:var(--sand-raised); border:1px solid var(--sand-border); }
+.slot     { width:100%; display:flex; flex-direction:column; align-items:center; }
+.connector{ width:1px; height:9px; background:var(--connector); }
+.node     { width:100%; border-radius:7px; padding:7px 5px; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.node-f   { background:var(--sand-raised); border:1px solid var(--sand-border); }
+.node-v   { border:1px dashed rgba(0,53,112,0.15); opacity:0.38; }
+.node-sig { width:26px; height:26px; border-radius:5px; background:var(--blue-mid); display:flex; align-items:center; justify-content:center; color:var(--gold); font-size:10px; }
+.node-sig-v { background:var(--sand-border); }
+.node-dot { width:4px; height:4px; border-radius:50%; background:var(--gold); }
+
+.agent-card { background:var(--sand-raised); border-radius:10px; border:1px solid var(--sand-border); padding:13px; display:flex; gap:11px; align-items:flex-start; }
+.a-sig { width:36px; height:36px; border-radius:8px; background:var(--blue-mid); display:flex; align-items:center; justify-content:center; color:var(--gold); flex-shrink:0; }
+
+.msg-row  { display:flex; align-items:flex-start; gap:8px; }
+.msg-ic   { width:22px; height:22px; border-radius:50%; background:var(--sand-border); display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--gold); font-weight:700; flex-family:'Inter',sans-serif; flex-shrink:0; margin-top:2px; }
+.bub      { border-radius:11px; border-top-left-radius:3px; padding:9px 12px; background:var(--sand-raised); border:1px solid var(--sand-border); max-width:84%; }
+.bub-u    { border-radius:11px; border-top-right-radius:3px; background:rgba(0,30,60,0.07); border:1px solid rgba(0,30,60,0.16); }
+.flex-end { display:flex; justify-content:flex-end; }
+.div-s    { height:1px; background:var(--sand-border); }
+
+.tag-g    { font-family:'Inter',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.06em; padding:3px 8px; border-radius:4px; background:var(--gold-faint); color:var(--gold); border:1px solid var(--gold-border); display:inline-block; }
+.btn-g    { background:var(--gold); color:white; font-family:'Inter',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.04em; padding:11px; border-radius:8px; border:none; width:100%; cursor:pointer; }
+.btn-gh   { background:transparent; color:var(--ink-mid); font-family:'Inter',sans-serif; font-size:13px; font-weight:500; padding:10px; border-radius:8px; border:1.5px solid var(--sand-border); width:100%; cursor:pointer; }
+
+.cr-wrap  { display:flex; height:480px; overflow:hidden; }
+.cr-chat  { flex:1; min-width:0; display:flex; flex-direction:column; background:var(--sand-ground); }
+.cr-prev  { background:var(--sand-surface); border-bottom:1px solid var(--sand-border); padding:9px 13px; display:flex; align-items:center; gap:9px; }
+.cr-msgs  { flex:1; padding:13px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+.cr-bar   { padding:11px 13px; border-top:1px solid var(--sand-border); background:var(--sand-ground); display:flex; gap:7px; }
+.cr-inp   { flex:1; background:var(--sand-raised); border:1.5px solid var(--sand-border); border-radius:7px; padding:9px 11px; font-family:'Inter',sans-serif; font-size:12px; color:var(--ink-dark); resize:none; }
+.arr-btn  { background:var(--gold); color:white; font-size:14px; font-weight:800; padding:9px 14px; border-radius:7px; border:none; cursor:pointer; flex-shrink:0; font-family:'Inter',sans-serif; }
+
+.cfg      { width:188px; flex-shrink:0; background:rgba(240,234,220,0.98); border-left:1px solid var(--sand-border); display:flex; flex-direction:column; }
+.cfg-hdr  { padding:11px 13px; border-bottom:1px solid var(--sand-border); display:flex; align-items:center; gap:8px; }
+.cfg-sig  { width:30px; height:30px; border-radius:6px; background:var(--blue-mid); display:flex; align-items:center; justify-content:center; color:var(--gold); flex-shrink:0; }
+.cfg-body { padding:13px; display:flex; flex-direction:column; gap:11px; overflow:hidden; }
+.cfg-lbl  { font-family:'Inter',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:6px; display:block; }
+.cfg-cap  { display:flex; align-items:flex-start; gap:7px; margin-bottom:6px; }
+.cfg-cn   { width:15px; height:15px; border-radius:3px; background:var(--sand-border); display:flex; align-items:center; justify-content:center; font-family:'Inter',sans-serif; font-size:8px; font-weight:700; color:var(--ink-mid); flex-shrink:0; margin-top:1px; }
+.seed-bar { height:2px; border-radius:2px; background:var(--sand-border); overflow:hidden; margin-bottom:8px; }
+.seed-f   { height:100%; background:var(--gold); }
+
+.ws-wrap  { display:flex; height:480px; overflow:hidden; }
+.ws-sb    { width:46px; background:var(--blue-deep); border-right:1px solid var(--blue-border); display:flex; flex-direction:column; align-items:center; padding:11px 0; gap:8px; }
+.ws-av    { width:30px; height:30px; border-radius:50%; background:var(--blue-mid); border:1px solid rgba(200,146,42,0.3); display:flex; align-items:center; justify-content:center; }
+.ws-ic    { width:30px; height:30px; border-radius:7px; background:var(--blue-raised); display:flex; align-items:center; justify-content:center; font-size:11px; }
+.ws-ic-a  { background:rgba(200,146,42,0.15); color:var(--gold); border:1px solid rgba(200,146,42,0.22); }
+.ws-main  { flex:1; display:flex; flex-direction:column; background:var(--sand-ground); }
+.ws-ah    { padding:11px 13px; background:var(--sand-surface); border-bottom:1px solid var(--sand-border); display:flex; align-items:center; justify-content:space-between; }
+.ws-al    { display:flex; align-items:center; gap:9px; }
+.ws-asig  { width:34px; height:34px; border-radius:8px; background:var(--blue-mid); display:flex; align-items:center; justify-content:center; color:var(--gold); }
+.ws-caps  { display:flex; gap:5px; }
+.ws-cap   { font-family:'Inter',sans-serif; font-size:11px; font-weight:600; padding:5px 10px; border-radius:6px; cursor:pointer; border-width:1px; border-style:solid; }
+.ws-ca    { background:rgba(0,30,60,0.08); color:var(--ink-dark); border-color:rgba(0,30,60,0.2); }
+.ws-ci    { background:transparent; color:var(--ink-mid); border-color:var(--sand-border); }
+.ws-msgs  { flex:1; padding:13px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+.ws-out   { border-radius:10px; border:1px solid var(--sand-border); background:var(--sand-raised); overflow:hidden; }
+.ws-oh    { padding:8px 12px; background:var(--sand-surface); border-bottom:1px solid var(--sand-border); display:flex; justify-content:space-between; align-items:center; }
+.ws-ob    { padding:11px 12px; }
+.ws-ib    { padding:11px 13px; background:var(--sand-surface); border-top:1px solid var(--sand-border); display:flex; gap:7px; }
+.ws-inp   { flex:1; background:var(--sand-raised); border:1.5px solid var(--sand-border); border-radius:7px; padding:9px 11px; font-family:'Inter',sans-serif; font-size:12px; color:var(--ink-dark); resize:none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   1 · FRAUNCES + INTER
+   Fraunces is a variable optical-size serif with a distinctive
+   warm irregularity — used by top-tier design studios and
+   editorial-grade products. At display sizes it reads as hand-
+   drawn authority. Inter is the global standard for precision UI.
+   Together: human authority + machine precision.
+═══════════════════════════════════════════════════════════════ */
+.f1-wordmark  { font-family:'Fraunces',serif; font-size:17px; font-weight:400; letter-spacing:0.18em; color:var(--gold); font-variation-settings:'opsz' 72; }
+.f1-ceo-name  { font-family:'Fraunces',serif; font-size:26px; font-weight:300; color:var(--ink-dark); letter-spacing:0.01em; line-height:1.1; font-variation-settings:'opsz' 144; }
+.f1-dom-lbl   { font-family:'Inter',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; }
+.f1-node-name { font-family:'Inter',sans-serif; font-size:9px; font-weight:600; color:var(--ink-dark); text-align:center; }
+.f1-ag-name   { font-family:'Fraunces',serif; font-size:20px; font-weight:400; color:var(--ink-dark); letter-spacing:0.01em; font-variation-settings:'opsz' 72; }
+.f1-ag-type   { font-family:'Inter',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--ink-mid); text-transform:uppercase; }
+.f1-ag-purp   { font-family:'Inter',sans-serif; font-size:12px; font-style:italic; color:var(--ink-mid); line-height:1.55; margin-top:4px; }
+.f1-body      { font-family:'Inter',sans-serif; font-size:13px; font-weight:500; color:var(--ink-dark); line-height:1.65; }
+.f1-lbl       { font-family:'Inter',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:7px; display:block; }
+.f1-cap-lbl   { font-family:'Inter',sans-serif; font-size:12px; font-weight:600; color:var(--ink-dark); }
+.f1-cap-sub   { font-family:'Inter',sans-serif; font-size:10px; color:var(--ink-muted); line-height:1.4; }
+.f1-cfg-name  { font-family:'Fraunces',serif; font-size:18px; font-weight:400; color:var(--ink-dark); font-variation-settings:'opsz' 72; }
+.f1-ws-name   { font-family:'Fraunces',serif; font-size:18px; font-weight:400; color:var(--ink-dark); font-variation-settings:'opsz' 72; }
+.f1-ws-sub    { font-family:'Inter',sans-serif; font-size:10px; color:var(--ink-muted); }
+.f1-out-lbl   { font-family:'Inter',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-mid); }
+.f1-out-body  { font-family:'Inter',sans-serif; font-size:12px; font-weight:500; color:var(--ink-dark); line-height:1.65; }
+.f1-pill      { font-family:'Inter',sans-serif; font-size:10px; font-weight:700; color:var(--gold); }
+
+/* ═══════════════════════════════════════════════════════════════
+   2 · INTER ONLY — EXTREME WEIGHT SCALE
+   No serif. Inter with a 3-level weight cascade:
+   800 for structural authority names, 600 for UI, 400 for reading.
+   Scale: 28 / 18 / 13 / 10 — huge jumps, no middle ground.
+   This is Linear, Vercel, Stripe Docs. The coldness is total.
+   Warmth comes only from gold and sand. Nothing else.
+═══════════════════════════════════════════════════════════════ */
+.f2-wordmark  { font-family:'Inter',sans-serif; font-size:15px; font-weight:800; letter-spacing:0.2em; color:var(--gold); text-transform:uppercase; }
+.f2-ceo-name  { font-family:'Inter',sans-serif; font-size:26px; font-weight:700; color:var(--ink-dark); letter-spacing:-0.02em; line-height:1.1; }
+.f2-dom-lbl   { font-family:'Inter',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; }
+.f2-node-name { font-family:'Inter',sans-serif; font-size:9px; font-weight:600; color:var(--ink-dark); text-align:center; }
+.f2-ag-name   { font-family:'Inter',sans-serif; font-size:20px; font-weight:800; color:var(--ink-dark); letter-spacing:-0.02em; }
+.f2-ag-type   { font-family:'Inter',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--gold); text-transform:uppercase; }
+.f2-ag-purp   { font-family:'Inter',sans-serif; font-size:12px; color:var(--ink-mid); line-height:1.55; margin-top:4px; }
+.f2-body      { font-family:'Inter',sans-serif; font-size:13px; font-weight:400; color:var(--ink-dark); line-height:1.65; }
+.f2-lbl       { font-family:'Inter',sans-serif; font-size:9px; font-weight:800; letter-spacing:0.2em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:7px; display:block; }
+.f2-cap-lbl   { font-family:'Inter',sans-serif; font-size:12px; font-weight:700; color:var(--ink-dark); }
+.f2-cap-sub   { font-family:'Inter',sans-serif; font-size:10px; color:var(--ink-muted); line-height:1.4; }
+.f2-cfg-name  { font-family:'Inter',sans-serif; font-size:17px; font-weight:700; color:var(--ink-dark); letter-spacing:-0.01em; }
+.f2-ws-name   { font-family:'Inter',sans-serif; font-size:17px; font-weight:700; color:var(--ink-dark); letter-spacing:-0.01em; }
+.f2-ws-sub    { font-family:'Inter',sans-serif; font-size:10px; color:var(--ink-muted); }
+.f2-out-lbl   { font-family:'Inter',sans-serif; font-size:10px; font-weight:800; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-mid); }
+.f2-out-body  { font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:var(--ink-dark); line-height:1.65; }
+.f2-pill      { font-family:'Inter',sans-serif; font-size:10px; font-weight:700; color:var(--gold); }
+
+/* ═══════════════════════════════════════════════════════════════
+   3 · SYNE + INTER
+   Syne is a geometric display typeface with a singular visual
+   signature — wide, optically-balanced, distinctly modern.
+   Used by high-end creative tech agencies and brands.
+   Syne for wordmark + structural positions.
+   Inter for all operational copy.
+   The most visually distinctive of the three.
+═══════════════════════════════════════════════════════════════ */
+.f3-wordmark  { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; letter-spacing:0.22em; color:var(--gold); }
+.f3-ceo-name  { font-family:'Syne',sans-serif; font-size:24px; font-weight:600; color:var(--ink-dark); letter-spacing:0.02em; line-height:1.1; }
+.f3-dom-lbl   { font-family:'Syne',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+.f3-node-name { font-family:'Inter',sans-serif; font-size:9px; font-weight:600; color:var(--ink-dark); text-align:center; }
+.f3-ag-name   { font-family:'Syne',sans-serif; font-size:20px; font-weight:700; color:var(--ink-dark); letter-spacing:0.01em; }
+.f3-ag-type   { font-family:'Inter',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.14em; color:var(--ink-mid); text-transform:uppercase; }
+.f3-ag-purp   { font-family:'Inter',sans-serif; font-size:12px; color:var(--ink-mid); line-height:1.55; margin-top:4px; }
+.f3-body      { font-family:'Inter',sans-serif; font-size:13px; font-weight:400; color:var(--ink-dark); line-height:1.65; }
+.f3-lbl       { font-family:'Syne',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:7px; display:block; }
+.f3-cap-lbl   { font-family:'Inter',sans-serif; font-size:12px; font-weight:600; color:var(--ink-dark); }
+.f3-cap-sub   { font-family:'Inter',sans-serif; font-size:10px; color:var(--ink-muted); line-height:1.4; }
+.f3-cfg-name  { font-family:'Syne',sans-serif; font-size:17px; font-weight:700; color:var(--ink-dark); }
+.f3-ws-name   { font-family:'Syne',sans-serif; font-size:17px; font-weight:700; color:var(--ink-dark); }
+.f3-ws-sub    { font-family:'Inter',sans-serif; font-size:10px; color:var(--ink-muted); }
+.f3-out-lbl   { font-family:'Syne',sans-serif; font-size:9px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-mid); }
+.f3-out-body  { font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:var(--ink-dark); line-height:1.65; }
+.f3-pill      { font-family:'Inter',sans-serif; font-size:10px; font-weight:700; color:var(--gold); }
+</style>
+</head>
+<body>
+
+<p class="page-label">AURA HQ · World-Class Typography · 3 Options</p>
+<p class="page-rule">Fraunces (editorial authority + warmth) · Inter pure scale (hyperscaler system) · Syne (geometric brand identity). Each across HQ, Creation, Workspace.</p>
+
+<!-- ═══════════ OPTION 1: FRAUNCES + INTER ═══════════ -->
+<div class="opt-row">
+  <div class="opt-hdr">
+    <span class="opt-num">1 · Fraunces + Inter</span>
+    <span class="opt-desc"><strong>Fraunces (optical-size variable serif) for structural authority positions. Inter for all operational copy.</strong> Fraunces is used by Stripe's design team, Loom, and top-tier editorial products. Its optical-size axis means it looks completely different at 26px vs 12px — monumental at display, refined at text. Inter delivers uncompromising UI precision. Together: human authority + machine precision.</span>
+  </div>
+  <div class="screens">
+    <div>
+      <p class="scr-lbl">HQ</p>
+      <div class="phone">
+        <div class="hdr"><span class="f1-wordmark">AURA HQ</span><span class="hdr-back">Sign out</span></div>
+        <div class="sand bp">
+          <div class="ceo-wrap">
+            <div class="ceo-av"><span style="font-family:'Fraunces',serif;font-size:26px;font-weight:300;color:var(--gold);font-variation-settings:'opsz' 144">M</span></div>
+            <p class="f1-ceo-name">Mohammed</p>
+            <div class="ceo-pill"><span class="f1-pill">1 of 9</span><div class="pill-dots"><div class="pill-dot" style="background:var(--gold)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div></div></div>
+          </div>
+          <div class="org-grid">
+            <div class="dom-col"><div class="dom-drop"></div><div class="dom-hdr"><p class="f1-dom-lbl" style="color:var(--blue-mid)">Work</p></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:8px;font-weight:700;color:var(--ink-muted)">M</span></div><p class="f1-node-name" style="color:var(--ink-muted)">Manuscript</p></div></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:8px;font-weight:700;color:var(--ink-muted)">C</span></div><p class="f1-node-name" style="color:var(--ink-muted)">Counsel</p></div></div></div>
+            <div class="dom-col"><div class="dom-drop"></div><div class="dom-hdr"><p class="f1-dom-lbl" style="color:var(--gold)">Money</p></div><div class="slot"><div class="connector"></div><div class="node node-f"><div class="node-sig"><span style="font-family:'Fraunces',serif;font-size:13px;font-weight:400;color:var(--gold);font-variation-settings:'opsz' 72">L</span></div><p class="f1-node-name">Ledger</p><div class="node-dot"></div></div></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:8px;font-weight:700;color:var(--ink-muted)">H</span></div><p class="f1-node-name" style="color:var(--ink-muted)">Horizon</p></div></div></div>
+            <div class="dom-col"><div class="dom-drop"></div><div class="dom-hdr"><p class="f1-dom-lbl" style="color:var(--ink-mid)">Growth</p></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:8px;font-weight:700;color:var(--ink-muted)">Mi</span></div><p class="f1-node-name" style="color:var(--ink-muted)">Mirror</p></div></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:8px;font-weight:700;color:var(--ink-muted)">G</span></div><p class="f1-node-name" style="color:var(--ink-muted)">Grain</p></div></div></div>
+          </div>
+          <button class="btn-gh">+ Appoint a new agent</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="scr-lbl">Creation</p>
+      <div class="phone phone-w">
+        <div class="hdr"><span class="hdr-back">← Back</span><span class="f1-wordmark">AURA HQ</span><span style="width:40px"></span></div>
+        <div class="cr-wrap">
+          <div class="cr-chat">
+            <div class="cr-prev"><div class="cfg-sig" style="width:26px;height:26px;border-radius:5px"><span style="font-family:'Fraunces',serif;font-size:13px;font-weight:400;color:var(--gold);font-variation-settings:'opsz' 72">L</span></div><div><p class="f1-body" style="font-size:12px;font-weight:600">Ledger</p><p class="f1-ag-purp" style="margin-top:0;font-size:10px">Honest financial counsel, no sugar-coating</p></div><div style="margin-left:auto;display:flex;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:var(--gold)"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--sand-border)"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--sand-border)"></div></div></div>
+            <div class="cr-msgs">
+              <div class="msg-row"><div class="msg-ic">◈</div><div class="bub"><p class="f1-body">Now give Ledger your context — 3 questions that make this yours.</p></div></div>
+              <div class="msg-row"><div class="msg-ic">◈</div><div class="bub"><p class="f1-body">What financial decision do you keep postponing?</p><p class="f1-body" style="font-size:10px;font-style:italic;color:var(--ink-muted);border-top:1px solid var(--sand-border);padding-top:5px;margin-top:5px;font-weight:400">So I know how to show up for you — not just what to say.</p></div></div>
+              <div class="flex-end"><div class="bub bub-u"><p class="f1-body">Buying a house. I'm broke.</p></div></div>
+            </div>
+            <div class="cr-bar"><textarea class="cr-inp" rows="1" placeholder="Be specific…"></textarea><button class="arr-btn">→</button></div>
+          </div>
+          <div class="cfg">
+            <div class="cfg-hdr"><div class="cfg-sig"><span style="font-family:'Fraunces',serif;font-size:16px;font-weight:400;color:var(--gold);font-variation-settings:'opsz' 72">L</span></div><div><p class="f1-cfg-name">Ledger</p><span class="tag-g" style="margin-top:3px">Money</span></div></div>
+            <div class="cfg-body">
+              <div><span class="cfg-lbl">Mission</span><p class="f1-ag-purp" style="font-size:11px;margin-top:0">Honest financial counsel, no sugar-coating</p></div>
+              <div class="div-s"></div>
+              <div><span class="cfg-lbl">Capabilities</span><div class="cfg-cap"><div class="cfg-cn">1</div><div><p class="f1-cap-lbl">Analyze</p><p class="f1-cap-sub">Without filter</p></div></div><div class="cfg-cap"><div class="cfg-cn">2</div><div><p class="f1-cap-lbl">Project</p><p class="f1-cap-sub">Model scenarios</p></div></div><div class="cfg-cap"><div class="cfg-cn">3</div><div><p class="f1-cap-lbl">Advise</p><p class="f1-cap-sub">Specific action</p></div></div></div>
+              <div class="div-s"></div>
+              <div><span class="cfg-lbl">Context · 1/3</span><div class="seed-bar"><div class="seed-f" style="width:33%"></div></div><p style="font-family:'Inter',sans-serif;font-size:10px;color:var(--ink-muted);line-height:1.4;opacity:0.4;margin-bottom:4px">What financial decision do you keep postponing?</p><p style="font-family:'Inter',sans-serif;font-size:10px;color:var(--ink-muted);line-height:1.4;opacity:0.22">If your situation were where you want in 5 years…</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="scr-lbl">Workspace</p>
+      <div class="phone phone-w">
+        <div class="hdr"><span class="hdr-back">← HQ</span><span class="f1-wordmark">AURA HQ</span><span style="width:40px"></span></div>
+        <div class="ws-wrap">
+          <div class="ws-sb"><div class="ws-av"><span style="font-family:'Fraunces',serif;font-size:14px;font-weight:300;color:var(--gold);font-variation-settings:'opsz' 72">M</span></div><div style="height:1px;width:24px;background:var(--blue-border)"></div><div class="ws-ic ws-ic-a"><span style="font-family:'Fraunces',serif;font-size:15px;font-weight:400;color:var(--gold);font-variation-settings:'opsz' 72">L</span></div><div class="ws-ic" style="margin-top:auto;color:rgba(255,255,255,0.2);font-family:'Inter',sans-serif;font-size:16px">+</div></div>
+          <div class="ws-main">
+            <div class="ws-ah"><div class="ws-al"><div class="ws-asig"><span style="font-family:'Fraunces',serif;font-size:17px;font-weight:400;color:var(--gold);font-variation-settings:'opsz' 72">L</span></div><div><p class="f1-ws-name">Ledger</p><p class="f1-ws-sub">Honest financial counsel, no sugar-coating</p></div></div><div class="ws-caps"><button class="ws-cap ws-ca">Analyze</button><button class="ws-cap ws-ci">Project</button><button class="ws-cap ws-ci">Advise</button></div></div>
+            <div class="ws-msgs">
+              <div class="msg-row"><div class="msg-ic" style="background:var(--blue-mid);color:var(--gold)">L</div><div class="bub"><p class="f1-body">Tell me what to analyze — income, spending, or all of it.</p></div></div>
+              <div class="flex-end"><div class="bub bub-u"><p class="f1-body">8k spend. 12k income. Feel broke.</p></div></div>
+              <div class="ws-out"><div class="ws-oh"><span class="f1-out-lbl">Analysis · Cash Flow</span><span class="tag-g">Save</span></div><div class="ws-ob"><p class="f1-out-body">Keeping <strong>33% (4k/mo)</strong> — functional but not building anything. The 4k feels like nothing because it has no destination. You need allocation, not just surplus.<br><br><span style="color:var(--ink-muted);font-size:11px">From memory: buying a house is the decision you keep postponing.</span></p></div></div>
+            </div>
+            <div class="ws-ib"><textarea class="ws-inp" rows="2" placeholder="Ask Ledger…"></textarea><button class="arr-btn" style="align-self:flex-end">→</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ OPTION 2: INTER ONLY ═══════════ -->
+<div class="opt-row">
+  <div class="opt-hdr">
+    <span class="opt-num">2 · Inter Only — Extreme Scale</span>
+    <span class="opt-desc"><strong>No serif. Inter with a three-tier weight cascade: 800 for structural authority, 600 for UI, 400 for reading.</strong> Scale: 26px / 17px / 13px / 9px — large gaps, no middle ground. This is Linear, Vercel, Stripe Docs. The coldness is structural. The warmth comes only from gold and sand. Nothing decorative. Nothing softened.</span>
+  </div>
+  <div class="screens">
+    <div>
+      <p class="scr-lbl">HQ</p>
+      <div class="phone">
+        <div class="hdr"><span class="f2-wordmark">AURA HQ</span><span class="hdr-back">Sign out</span></div>
+        <div class="sand bp">
+          <div class="ceo-wrap">
+            <div class="ceo-av"><span style="font-family:'Inter',sans-serif;font-size:20px;font-weight:800;color:var(--gold);letter-spacing:-0.02em">M</span></div>
+            <p class="f2-ceo-name">Mohammed</p>
+            <div class="ceo-pill"><span class="f2-pill">1 of 9</span><div class="pill-dots"><div class="pill-dot" style="background:var(--gold)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div></div></div>
+          </div>
+          <div class="org-grid">
+            <div class="dom-col"><div class="dom-drop"></div><div class="dom-hdr"><p class="f2-dom-lbl" style="color:var(--blue-mid)">Work</p></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:800;color:var(--ink-muted)">M</span></div><p class="f2-node-name" style="color:var(--ink-muted)">Manuscript</p></div></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:800;color:var(--ink-muted)">C</span></div><p class="f2-node-name" style="color:var(--ink-muted)">Counsel</p></div></div></div>
+            <div class="dom-col"><div class="dom-drop"></div><div class="dom-hdr"><p class="f2-dom-lbl" style="color:var(--gold)">Money</p></div><div class="slot"><div class="connector"></div><div class="node node-f"><div class="node-sig"><span style="font-family:'Inter',sans-serif;font-size:11px;font-weight:800;color:var(--gold)">L</span></div><p class="f2-node-name">Ledger</p><div class="node-dot"></div></div></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:800;color:var(--ink-muted)">H</span></div><p class="f2-node-name" style="color:var(--ink-muted)">Horizon</p></div></div></div>
+            <div class="dom-col"><div class="dom-drop"></div><div class="dom-hdr"><p class="f2-dom-lbl" style="color:var(--ink-mid)">Growth</p></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:800;color:var(--ink-muted)">Mi</span></div><p class="f2-node-name" style="color:var(--ink-muted)">Mirror</p></div></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:800;color:var(--ink-muted)">G</span></div><p class="f2-node-name" style="color:var(--ink-muted)">Grain</p></div></div></div>
+          </div>
+          <button class="btn-gh">+ Appoint a new agent</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="scr-lbl">Creation</p>
+      <div class="phone phone-w">
+        <div class="hdr"><span class="hdr-back">← Back</span><span class="f2-wordmark">AURA HQ</span><span style="width:40px"></span></div>
+        <div class="cr-wrap">
+          <div class="cr-chat">
+            <div class="cr-prev"><div class="cfg-sig" style="width:26px;height:26px;border-radius:5px"><span style="font-family:'Inter',sans-serif;font-size:11px;font-weight:800;color:var(--gold)">L</span></div><div><p class="f2-body" style="font-size:12px;font-weight:700">Ledger</p><p class="f2-body" style="font-size:10px;color:var(--ink-mid)">Honest financial counsel, no sugar-coating</p></div><div style="margin-left:auto;display:flex;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:var(--gold)"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--sand-border)"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--sand-border)"></div></div></div>
+            <div class="cr-msgs">
+              <div class="msg-row"><div class="msg-ic">◈</div><div class="bub"><p class="f2-body">Now give Ledger your context — 3 questions that make this yours.</p></div></div>
+              <div class="msg-row"><div class="msg-ic">◈</div><div class="bub"><p class="f2-body">What financial decision do you keep postponing?</p><p class="f2-body" style="font-size:10px;color:var(--ink-muted);border-top:1px solid var(--sand-border);padding-top:5px;margin-top:5px">So I know how to show up for you — not just what to say.</p></div></div>
+              <div class="flex-end"><div class="bub bub-u"><p class="f2-body">Buying a house. I'm broke.</p></div></div>
+            </div>
+            <div class="cr-bar"><textarea class="cr-inp" rows="1" placeholder="Be specific…"></textarea><button class="arr-btn">→</button></div>
+          </div>
+          <div class="cfg">
+            <div class="cfg-hdr"><div class="cfg-sig"><span style="font-family:'Inter',sans-serif;font-size:14px;font-weight:800;color:var(--gold)">L</span></div><div><p class="f2-cfg-name">Ledger</p><span class="tag-g" style="margin-top:3px">Money</span></div></div>
+            <div class="cfg-body">
+              <div><span class="cfg-lbl">Mission</span><p class="f2-body" style="font-size:11px;color:var(--ink-mid)">Honest financial counsel, no sugar-coating</p></div>
+              <div class="div-s"></div>
+              <div><span class="cfg-lbl">Capabilities</span><div class="cfg-cap"><div class="cfg-cn">1</div><div><p class="f2-cap-lbl">Analyze</p><p class="f2-cap-sub">Without filter</p></div></div><div class="cfg-cap"><div class="cfg-cn">2</div><div><p class="f2-cap-lbl">Project</p><p class="f2-cap-sub">Model scenarios</p></div></div><div class="cfg-cap"><div class="cfg-cn">3</div><div><p class="f2-cap-lbl">Advise</p><p class="f2-cap-sub">Specific action</p></div></div></div>
+              <div class="div-s"></div>
+              <div><span class="cfg-lbl">Context · 1/3</span><div class="seed-bar"><div class="seed-f" style="width:33%"></div></div><p style="font-family:'Inter',sans-serif;font-size:10px;color:var(--ink-muted);line-height:1.4;opacity:0.4;margin-bottom:4px">What financial decision do you keep postponing?</p><p style="font-family:'Inter',sans-serif;font-size:10px;color:var(--ink-muted);line-height:1.4;opacity:0.22">If your situation were where you want in 5 years…</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="scr-lbl">Workspace</p>
+      <div class="phone phone-w">
+        <div class="hdr"><span class="hdr-back">← HQ</span><span class="f2-wordmark">AURA HQ</span><span style="width:40px"></span></div>
+        <div class="ws-wrap">
+          <div class="ws-sb"><div class="ws-av"><span style="font-family:'Inter',sans-serif;font-size:13px;font-weight:800;color:var(--gold)">M</span></div><div style="height:1px;width:24px;background:var(--blue-border)"></div><div class="ws-ic ws-ic-a"><span style="font-family:'Inter',sans-serif;font-size:12px;font-weight:800;color:var(--gold)">L</span></div><div class="ws-ic" style="margin-top:auto;color:rgba(255,255,255,0.2);font-family:'Inter',sans-serif;font-size:16px;font-weight:300">+</div></div>
+          <div class="ws-main">
+            <div class="ws-ah"><div class="ws-al"><div class="ws-asig"><span style="font-family:'Inter',sans-serif;font-size:15px;font-weight:800;color:var(--gold)">L</span></div><div><p class="f2-ws-name">Ledger</p><p class="f2-ws-sub">Honest financial counsel, no sugar-coating</p></div></div><div class="ws-caps"><button class="ws-cap ws-ca">Analyze</button><button class="ws-cap ws-ci">Project</button><button class="ws-cap ws-ci">Advise</button></div></div>
+            <div class="ws-msgs">
+              <div class="msg-row"><div class="msg-ic" style="background:var(--blue-mid);color:var(--gold)">L</div><div class="bub"><p class="f2-body">Tell me what to analyze — income, spending, or all of it.</p></div></div>
+              <div class="flex-end"><div class="bub bub-u"><p class="f2-body">8k spend. 12k income. Feel broke.</p></div></div>
+              <div class="ws-out"><div class="ws-oh"><span class="f2-out-lbl">Analysis · Cash Flow</span><span class="tag-g">Save</span></div><div class="ws-ob"><p class="f2-out-body">Keeping <strong>33% (4k/mo)</strong> — functional but not building anything. The 4k feels like nothing because it has no destination. You need allocation, not just surplus.<br><br><span style="color:var(--ink-muted);font-size:11px">From memory: buying a house is the decision you keep postponing.</span></p></div></div>
+            </div>
+            <div class="ws-ib"><textarea class="ws-inp" rows="2" placeholder="Ask Ledger…"></textarea><button class="arr-btn" style="align-self:flex-end">→</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ OPTION 3: SYNE + INTER ═══════════ -->
+<div class="opt-row">
+  <div class="opt-hdr">
+    <span class="opt-num">3 · Syne + Inter</span>
+    <span class="opt-desc"><strong>Syne for brand/structural positions. Inter for all operational copy.</strong> Syne is a geometric display typeface with a distinctive visual signature — wide optical balance, modern weight, used by high-end creative tech and brand-forward products. It reads as unmistakably intentional. No serif — the brand personality comes from Syne's geometry. The most visually distinctive and ownable of the three.</span>
+  </div>
+  <div class="screens">
+    <div>
+      <p class="scr-lbl">HQ</p>
+      <div class="phone">
+        <div class="hdr"><span class="f3-wordmark">AURA HQ</span><span class="hdr-back">Sign out</span></div>
+        <div class="sand bp">
+          <div class="ceo-wrap">
+            <div class="ceo-av"><span style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--gold)">M</span></div>
+            <p class="f3-ceo-name">Mohammed</p>
+            <div class="ceo-pill"><span class="f3-pill">1 of 9</span><div class="pill-dots"><div class="pill-dot" style="background:var(--gold)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div><div class="pill-dot" style="background:var(--sand-border)"></div></div></div>
+          </div>
+          <div class="org-grid">
+            <div class="dom-col"><div class="dom-drop"></div><div class="dom-hdr"><p class="f3-dom-lbl" style="color:var(--blue-mid)">Work</p></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:700;color:var(--ink-muted)">M</span></div><p class="f3-node-name" style="color:var(--ink-muted)">Manuscript</p></div></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:700;color:var(--ink-muted)">C</span></div><p class="f3-node-name" style="color:var(--ink-muted)">Counsel</p></div></div></div>
+            <div class="dom-col"><div class="dom-drop"></div><div class="dom-hdr"><p class="f3-dom-lbl" style="color:var(--gold)">Money</p></div><div class="slot"><div class="connector"></div><div class="node node-f"><div class="node-sig"><span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--gold)">L</span></div><p class="f3-node-name">Ledger</p><div class="node-dot"></div></div></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:700;color:var(--ink-muted)">H</span></div><p class="f3-node-name" style="color:var(--ink-muted)">Horizon</p></div></div></div>
+            <div class="dom-col"><div class="dom-drop"></div><div class="dom-hdr"><p class="f3-dom-lbl" style="color:var(--ink-mid)">Growth</p></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:700;color:var(--ink-muted)">Mi</span></div><p class="f3-node-name" style="color:var(--ink-muted)">Mirror</p></div></div><div class="slot"><div class="connector"></div><div class="node node-v"><div class="node-sig node-sig-v"><span style="font-family:'Inter',sans-serif;font-size:7px;font-weight:700;color:var(--ink-muted)">G</span></div><p class="f3-node-name" style="color:var(--ink-muted)">Grain</p></div></div></div>
+          </div>
+          <button class="btn-gh">+ Appoint a new agent</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="scr-lbl">Creation</p>
+      <div class="phone phone-w">
+        <div class="hdr"><span class="hdr-back">← Back</span><span class="f3-wordmark">AURA HQ</span><span style="width:40px"></span></div>
+        <div class="cr-wrap">
+          <div class="cr-chat">
+            <div class="cr-prev"><div class="cfg-sig" style="width:26px;height:26px;border-radius:5px"><span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--gold)">L</span></div><div><p class="f3-body" style="font-size:12px;font-weight:600">Ledger</p><p class="f3-body" style="font-size:10px;color:var(--ink-mid)">Honest financial counsel, no sugar-coating</p></div><div style="margin-left:auto;display:flex;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:var(--gold)"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--sand-border)"></div><div style="width:7px;height:7px;border-radius:50%;background:var(--sand-border)"></div></div></div>
+            <div class="cr-msgs">
+              <div class="msg-row"><div class="msg-ic">◈</div><div class="bub"><p class="f3-body">Now give Ledger your context — 3 questions that make this yours.</p></div></div>
+              <div class="msg-row"><div class="msg-ic">◈</div><div class="bub"><p class="f3-body">What financial decision do you keep postponing?</p><p class="f3-body" style="font-size:10px;color:var(--ink-muted);border-top:1px solid var(--sand-border);padding-top:5px;margin-top:5px">So I know how to show up for you — not just what to say.</p></div></div>
+              <div class="flex-end"><div class="bub bub-u"><p class="f3-body">Buying a house. I'm broke.</p></div></div>
+            </div>
+            <div class="cr-bar"><textarea class="cr-inp" rows="1" placeholder="Be specific…"></textarea><button class="arr-btn">→</button></div>
+          </div>
+          <div class="cfg">
+            <div class="cfg-hdr"><div class="cfg-sig"><span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--gold)">L</span></div><div><p class="f3-cfg-name">Ledger</p><span class="tag-g" style="margin-top:3px">Money</span></div></div>
+            <div class="cfg-body">
+              <div><span class="cfg-lbl">Mission</span><p class="f3-body" style="font-size:11px;color:var(--ink-mid)">Honest financial counsel, no sugar-coating</p></div>
+              <div class="div-s"></div>
+              <div><span class="cfg-lbl">Capabilities</span><div class="cfg-cap"><div class="cfg-cn">1</div><div><p class="f3-cap-lbl">Analyze</p><p class="f3-cap-sub">Without filter</p></div></div><div class="cfg-cap"><div class="cfg-cn">2</div><div><p class="f3-cap-lbl">Project</p><p class="f3-cap-sub">Model scenarios</p></div></div><div class="cfg-cap"><div class="cfg-cn">3</div><div><p class="f3-cap-lbl">Advise</p><p class="f3-cap-sub">Specific action</p></div></div></div>
+              <div class="div-s"></div>
+              <div><span class="cfg-lbl">Context · 1/3</span><div class="seed-bar"><div class="seed-f" style="width:33%"></div></div><p style="font-family:'Inter',sans-serif;font-size:10px;color:var(--ink-muted);line-height:1.4;opacity:0.4;margin-bottom:4px">What financial decision do you keep postponing?</p><p style="font-family:'Inter',sans-serif;font-size:10px;color:var(--ink-muted);line-height:1.4;opacity:0.22">If your situation were where you want in 5 years…</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="scr-lbl">Workspace</p>
+      <div class="phone phone-w">
+        <div class="hdr"><span class="hdr-back">← HQ</span><span class="f3-wordmark">AURA HQ</span><span style="width:40px"></span></div>
+        <div class="ws-wrap">
+          <div class="ws-sb"><div class="ws-av"><span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--gold)">M</span></div><div style="height:1px;width:24px;background:var(--blue-border)"></div><div class="ws-ic ws-ic-a"><span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--gold)">L</span></div><div class="ws-ic" style="margin-top:auto;color:rgba(255,255,255,0.2);font-family:'Inter',sans-serif;font-size:16px;font-weight:300">+</div></div>
+          <div class="ws-main">
+            <div class="ws-ah"><div class="ws-al"><div class="ws-asig"><span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--gold)">L</span></div><div><p class="f3-ws-name">Ledger</p><p class="f3-ws-sub">Honest financial counsel, no sugar-coating</p></div></div><div class="ws-caps"><button class="ws-cap ws-ca">Analyze</button><button class="ws-cap ws-ci">Project</button><button class="ws-cap ws-ci">Advise</button></div></div>
+            <div class="ws-msgs">
+              <div class="msg-row"><div class="msg-ic" style="background:var(--blue-mid);color:var(--gold)">L</div><div class="bub"><p class="f3-body">Tell me what to analyze — income, spending, or all of it.</p></div></div>
+              <div class="flex-end"><div class="bub bub-u"><p class="f3-body">8k spend. 12k income. Feel broke.</p></div></div>
+              <div class="ws-out"><div class="ws-oh"><span class="f3-out-lbl">Analysis · Cash Flow</span><span class="tag-g">Save</span></div><div class="ws-ob"><p class="f3-out-body">Keeping <strong>33% (4k/mo)</strong> — functional but not building anything. The 4k feels like nothing because it has no destination. You need allocation, not just surplus.<br><br><span style="color:var(--ink-muted);font-size:11px">From memory: buying a house is the decision you keep postponing.</span></p></div></div>
+            </div>
+            <div class="ws-ib"><textarea class="ws-inp" rows="2" placeholder="Ask Ledger…"></textarea><button class="arr-btn" style="align-self:flex-end">→</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -36,11 +36,12 @@ export default async function AgentPage({ params }: PageProps) {
         initialMemory={[]}
         initialCards={[]}
         userId="dev"
+        googleConnected={false}
       />
     )
   }
 
-  const [{ data: agent }, { data: memory }, { data: cards }] = await Promise.all([
+  const [{ data: agent }, { data: memory }, { data: convRows }, { data: googleConn }] = await Promise.all([
     supabase
       .from('agents')
       .select('*')
@@ -55,12 +56,19 @@ export default async function AgentPage({ params }: PageProps) {
       .order('created_at', { ascending: false })
       .limit(25),
     supabase
-      .from('output_cards')
-      .select('*')
+      .from('conversations')
+      .select('id, role, content, created_at')
       .eq('agent_id', id)
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20),
+      .in('role', ['user', 'assistant'])
+      .order('created_at', { ascending: true })
+      .limit(60),
+    supabase
+      .from('oauth_connections')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('provider', 'google')
+      .maybeSingle(),
   ])
 
   if (!agent) notFound()
@@ -69,8 +77,9 @@ export default async function AgentPage({ params }: PageProps) {
     <AgentWorkspace
       agent={agent as Agent}
       initialMemory={(memory ?? []) as MemoryItem[]}
-      initialCards={(cards ?? []) as OutputCard[]}
+      initialCards={(convRows ?? []) as OutputCard[]}
       userId={user.id}
+      googleConnected={!!googleConn}
     />
   )
 }

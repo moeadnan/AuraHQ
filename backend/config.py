@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     next_public_app_url: str = "http://localhost:3000"
     backend_url: str = "http://localhost:8000"
 
+    # Google OAuth — for Gmail + Calendar integrations
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:3000/api/connect/google/callback"
+
     def validate_required(self) -> None:
         missing = [
             k for k, v in {

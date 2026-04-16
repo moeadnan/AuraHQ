@@ -395,12 +395,12 @@ export function AgentCreationFlow({ userId, existingAgents, ownerName, ownerAvat
       {/* Header — spans full width */}
       <header
         className="flex items-center px-6 py-4 flex-shrink-0"
-        style={{ borderBottom: '1px solid var(--color-structural)' }}
+        style={{ background: 'var(--color-chrome)', borderBottom: '1px solid var(--color-chrome-border)' }}
       >
         <button
           onClick={() => router.push('/hq')}
           className="text-sm mr-4"
-          style={{ color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}
+          style={{ color: 'rgba(255,255,255,0.38)', background: 'none', border: 'none', cursor: 'pointer' }}
         >
           ← Back
         </button>

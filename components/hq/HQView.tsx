@@ -188,13 +188,14 @@ export function HQView({ profile, agents }: HQViewProps) {
   return (
     <div className="min-h-dvh flex flex-col" style={{ background: 'var(--color-ground)' }}>
       {/* Header */}
-      <header className="flex items-center justify-between px-6 pt-6 pb-2 flex-shrink-0">
+      <header className="flex items-center justify-between px-6 py-4 flex-shrink-0"
+        style={{ background: 'var(--color-chrome)', borderBottom: '1px solid var(--color-chrome-border)' }}>
         <span className="font-display font-bold text-lg tracking-widest"
           style={{ color: 'var(--color-principal)', letterSpacing: '0.2em' }}>
           AURA HQ
         </span>
         <button onClick={handleSignOut} disabled={signingOut} className="text-xs"
-          style={{ color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}>
+          style={{ color: 'rgba(255,255,255,0.38)', background: 'none', border: 'none', cursor: 'pointer' }}>
           Sign out
         </button>
       </header>
@@ -210,13 +211,13 @@ export function HQView({ profile, agents }: HQViewProps) {
               {profile.avatar_url ? (
                 <Image src={profile.avatar_url} alt={profile.name || 'You'} fill className="object-cover" priority />
               ) : (
-                <div className="w-full h-full flex items-center justify-center font-display text-4xl font-light"
+                <div className="w-full h-full flex items-center justify-center font-display-xl text-4xl font-light"
                   style={{ background: 'var(--color-structural)', color: 'var(--color-principal)' }}>
                   {profile.name?.[0]?.toUpperCase() || '◈'}
                 </div>
               )}
             </div>
-            <p className="font-display font-normal text-xl mt-3" style={{ color: 'var(--color-primary)' }}>
+            <p className="font-display-xl font-light text-xl mt-3" style={{ color: 'var(--color-primary)' }}>
               {profile.name}
             </p>
             <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-full"

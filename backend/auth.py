@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import urllib.parse
 
 from fastapi import HTTPException, Request
 from supabase import AsyncClient
@@ -17,9 +18,9 @@ def _extract_token_from_cookies(request: Request) -> str | None:
     """
     @supabase/ssr stores the session as JSON in sb-<ref>-auth-token.
     Large sessions are chunked across sb-<ref>-auth-token.0, .1, etc.
-    Falls back to a plain Bearer token or legacy sb-access-token cookie.
+    The cookie value may be URL-encoded by the browser or the Next.js proxy.
     """
-    # Try chunked cookie first (sb-<ref>-auth-token.0 + .1 + ...)
+    # Try chunked cookie first
     chunks: list[str] = []
     for i in range(10):
         chunk = request.cookies.get(f"{_SSR_COOKIE_NAME}.{i}")
@@ -30,11 +31,21 @@ def _extract_token_from_cookies(request: Request) -> str | None:
     raw = "".join(chunks) if chunks else request.cookies.get(_SSR_COOKIE_NAME)
 
     if raw:
-        try:
-            session = json.loads(raw)
-            return session.get("access_token")
-        except (json.JSONDecodeError, AttributeError):
-            return raw  # treat as a plain token string
+        # Try multiple decoding strategies — the value may be URL-encoded
+        candidates = [raw, urllib.parse.unquote(raw)]
+        for candidate in candidates:
+            try:
+                session = json.loads(candidate)
+                if isinstance(session, dict):
+                    token = session.get("access_token")
+                    if token and isinstance(token, str) and token.count(".") == 2:
+                        return token
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        # If the raw value itself is a bare JWT (three dot-separated segments), use it
+        if isinstance(raw, str) and raw.count(".") == 2:
+            return raw
 
     # Legacy / manual fallback
     return request.cookies.get("sb-access-token")

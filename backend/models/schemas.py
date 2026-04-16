@@ -89,7 +89,7 @@ class OutputCard(BaseModel):
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    capability: str
+    capability: str = Field(default='auto')
     user_input: str = Field(min_length=1)
 
 

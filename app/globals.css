@@ -1,29 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-ground: #F5EFE5;
-  --color-surface: #FFFFFF;
-  --color-raised: #FAF7F2;
-  --color-primary: #1E1610;
-  --color-secondary: #5C4A38;
-  --color-tertiary: #8A7A6A;
-  --color-principal: #B8762A;
-  --color-principal-light: #CCAA6A;
-  --color-structural: #E0D6CA;
+  /* Sand content scale */
+  --color-ground: #EDE4D0;
+  --color-surface: #F5EFE4;
+  --color-raised: #FDFAF5;
+
+  /* Chrome / navigation scale — deep navy */
+  --color-chrome: #001E3C;
+  --color-chrome-deep: #001428;
+  --color-chrome-border: rgba(0, 53, 112, 0.45);
+
+  /* Ink scale — navy, not brown */
+  --color-primary: #0A1220;
+  --color-secondary: #3A4E68;
+  --color-tertiary: #7A8A9A;
+
+  /* Gold accent */
+  --color-principal: #C8922A;
+  --color-principal-light: #D4AA5A;
+
+  /* Structural borders */
+  --color-structural: #C8BAA4;
   --color-resolution: #6B7A68;
 
   /* Text role aliases */
-  --color-text-primary: #1E1610;
-  --color-text-secondary: #5C4A38;
-  --color-text-tertiary: #8A7A6A;
+  --color-text-primary: #0A1220;
+  --color-text-secondary: #3A4E68;
+  --color-text-tertiary: #7A8A9A;
 
-  --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
 
   --shadow-surface: 0px 2px 18px rgba(92, 74, 56, 0.18);
   --shadow-elevated: 0px 6px 30px rgba(92, 74, 56, 0.24);
-  --shadow-principal-glow: 0 0 0 2px #B8762A;
+  --shadow-principal-glow: 0 0 0 2px #C8922A;
 
   --ease-aura: cubic-bezier(0.04, 0, 0.2, 1);
   --radius-sm: 6px;
@@ -63,7 +75,7 @@ body {
 }
 
 ::selection {
-  background: rgba(184, 118, 42, 0.2);
+  background: rgba(200, 146, 42, 0.2);
   color: var(--color-primary);
 }
 
@@ -71,6 +83,15 @@ body {
 .font-display {
   font-family: var(--font-display);
   letter-spacing: 0.015em;
+  font-variation-settings: 'opsz' 72;
+}
+
+/* For large display positions (hero, CEO name) — optical size 144 gives
+   Fraunces its most refined, high-contrast form at large point sizes */
+.font-display-xl {
+  font-family: var(--font-display);
+  font-variation-settings: 'opsz' 144;
+  letter-spacing: 0.01em;
 }
 
 .text-principal-size { font-size: 24px; line-height: 1.3; letter-spacing: 0.02em; }
@@ -149,7 +170,7 @@ body {
 .capability-btn--active {
   background: var(--color-raised);
   color: var(--color-primary);
-  border-color: rgba(184, 118, 42, 0.4);
+  border-color: rgba(200, 146, 42, 0.4);
 }
 
 /* ── Input field ──────────────────────────────────────────────────────────── */
@@ -169,7 +190,7 @@ body {
 
 .input-field:focus {
   outline: none;
-  border-color: rgba(184, 118, 42, 0.6);
+  border-color: rgba(200, 146, 42, 0.6);
 }
 
 .input-field::placeholder {
@@ -235,8 +256,8 @@ body {
 }
 
 @keyframes glow-ring {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(184, 118, 42, 0.4); }
-  50%       { box-shadow: 0 0 0 4px rgba(184, 118, 42, 0.8); }
+  0%, 100% { box-shadow: 0 0 0 2px rgba(200, 146, 42, 0.4); }
+  50%       { box-shadow: 0 0 0 4px rgba(200, 146, 42, 0.8); }
 }
 
 .animate-fade-up   { animation: fade-up 500ms var(--ease-aura) forwards; }
