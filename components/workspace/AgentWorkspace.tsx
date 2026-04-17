@@ -80,8 +80,32 @@ export function AgentWorkspace({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  const [isGoogleConnected, setIsGoogleConnected] = useState(googleConnected)
+
   const needsGoogle = TOOL_NEEDS_GOOGLE.has(agent.agent_type)
-  const showConnectBanner = needsGoogle && !googleConnected
+  const showConnectBanner = needsGoogle && !isGoogleConnected
+
+  async function getAuthHeader(): Promise<Record<string, string>> {
+    const { data: { session } } = await createClient().auth.getSession()
+    return session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}
+  }
+
+  async function connectGoogle() {
+    try {
+      const headers = await getAuthHeader()
+      const res = await fetch('/api/connect/google', { headers })
+      const data = await res.json()
+      if (data.auth_url) window.location.href = data.auth_url
+    } catch { /* ignore */ }
+  }
+
+  async function disconnectGoogle() {
+    try {
+      const headers = await getAuthHeader()
+      await fetch('/api/connect/google', { method: 'DELETE', headers })
+      setIsGoogleConnected(false)
+    } catch { /* ignore */ }
+  }
 
   // Mark agent as recently used
   useEffect(() => {
@@ -221,17 +245,39 @@ export function AgentWorkspace({
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setMemoryOpen(o => !o)}
-          className="text-xs px-2.5 py-1 rounded"
-          style={{
-            color: memoryOpen ? 'var(--color-principal)' : 'rgba(255,255,255,0.38)',
-            background: memoryOpen ? 'rgba(200,146,42,0.12)' : 'transparent',
-            border: 'none', cursor: 'pointer',
-          }}
-        >
-          Memory · {memory.length}
-        </button>
+        <div className="flex items-center gap-2">
+          {needsGoogle && isGoogleConnected && (
+            <button
+              onClick={disconnectGoogle}
+              className="text-xs px-2.5 py-1 rounded"
+              style={{ color: 'var(--color-principal)', background: 'rgba(200,146,42,0.12)', border: 'none', cursor: 'pointer' }}
+              title="Disconnect Gmail"
+            >
+              Gmail ●
+            </button>
+          )}
+          {needsGoogle && !isGoogleConnected && (
+            <button
+              onClick={connectGoogle}
+              className="text-xs px-2.5 py-1 rounded"
+              style={{ color: 'rgba(255,255,255,0.38)', background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer' }}
+              title="Connect Gmail"
+            >
+              Gmail ○
+            </button>
+          )}
+          <button
+            onClick={() => setMemoryOpen(o => !o)}
+            className="text-xs px-2.5 py-1 rounded"
+            style={{
+              color: memoryOpen ? 'var(--color-principal)' : 'rgba(255,255,255,0.38)',
+              background: memoryOpen ? 'rgba(200,146,42,0.12)' : 'transparent',
+              border: 'none', cursor: 'pointer',
+            }}
+          >
+            Memory · {memory.length}
+          </button>
+        </div>
       </header>
 
       {/* Memory drawer */}
@@ -264,11 +310,13 @@ export function AgentWorkspace({
           <p className="text-xs" style={{ color: 'var(--color-secondary)' }}>
             Connect Gmail to unlock {agent.name}'s full capabilities.
           </p>
-          <Link href="/settings/connections"
+          <button
+            onClick={connectGoogle}
             className="text-xs font-medium flex-shrink-0 px-3 py-1 rounded-lg"
-            style={{ background: 'var(--color-principal)', color: '#fff' }}>
+            style={{ background: 'var(--color-principal)', color: '#fff', border: 'none', cursor: 'pointer' }}
+          >
             Connect
-          </Link>
+          </button>
         </div>
       )}
 

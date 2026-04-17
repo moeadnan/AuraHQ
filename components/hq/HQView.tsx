@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import type { Agent, Profile, AgentType } from '@/types'
 import { getNodeState, relativeTime } from '@/lib/utils'
 import { AgentSignature } from './AgentSignature'
+import { AgentMiniChat } from './AgentMiniChat'
 import { createClient } from '@/lib/supabase/client'
 import { DOMAINS, DOMAIN_AGENTS } from '@/lib/agents/definitions'
 
@@ -79,14 +80,14 @@ function StyledAvatar({ avatarUrl, name, agentType }: {
 }
 
 // ── Filled agent card ────────────────────────────────────────────────────────
-function FilledCard({ agent, profile }: { agent: Agent; profile: Profile }) {
+function FilledCard({ agent, profile, onOpenChat }: { agent: Agent; profile: Profile; onOpenChat: () => void }) {
   const state = getNodeState(agent.last_used_at)
   const dotColor =
     state === 'active' ? 'var(--color-principal)' :
     state === 'quiet'  ? 'var(--color-text-secondary)' :
                          'var(--color-structural)'
   return (
-    <Link href={`/agents/${agent.id}`} className="block group w-full">
+    <div className="block group w-full relative cursor-pointer" onClick={onOpenChat}>
       <div
         className="flex flex-col items-center py-3 px-3 rounded-lg transition-all duration-200 w-full"
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-structural)', boxShadow: 'var(--shadow-surface)' }}
@@ -103,7 +104,17 @@ function FilledCard({ agent, profile }: { agent: Agent; profile: Profile }) {
           <p style={{ color: 'var(--color-text-tertiary)', fontSize: '10px' }}>{relativeTime(agent.last_used_at)}</p>
         </div>
       </div>
-    </Link>
+      {/* Hover shortcut to full workspace */}
+      <Link
+        href={`/agents/${agent.id}`}
+        className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-xs transition-opacity"
+        style={{ background: 'rgba(200,146,42,0.12)', color: 'var(--color-principal)', textDecoration: 'none' }}
+        onClick={e => e.stopPropagation()}
+        title="Open workspace"
+      >
+        ↗
+      </Link>
+    </div>
   )
 }
 
@@ -131,7 +142,7 @@ function VacancyCard({ agentType }: { agentType: AgentType }) {
 }
 
 // ── Domain column ─────────────────────────────────────────────────────────────
-function DomainColumn({ domain, agents, profile }: { domain: string; agents: Agent[]; profile: Profile }) {
+function DomainColumn({ domain, agents, profile, onOpenChat }: { domain: string; agents: Agent[]; profile: Profile; onOpenChat: (agent: Agent) => void }) {
   const meta = DOMAIN_META[domain]
   const domainAgents = DOMAIN_AGENTS[domain]
   const filledInDomain = domainAgents.filter(t => agents.some(a => a.agent_type === t)).length
@@ -162,7 +173,7 @@ function DomainColumn({ domain, agents, profile }: { domain: string; agents: Age
           <div key={agentType} className="flex flex-col items-center w-full">
             <div className="w-px h-5" style={{ background: 'var(--color-structural)' }} />
             {agent
-              ? <FilledCard agent={agent} profile={profile} />
+              ? <FilledCard agent={agent} profile={profile} onOpenChat={() => onOpenChat(agent)} />
               : <VacancyCard agentType={agentType} />}
           </div>
         )
@@ -175,12 +186,33 @@ function DomainColumn({ domain, agents, profile }: { domain: string; agents: Age
 export function HQView({ profile, agents }: HQViewProps) {
   const router = useRouter()
   const [signingOut, setSigningOut] = useState(false)
+  const [openPanels, setOpenPanels] = useState<{ id: string; agent: Agent; minimized: boolean }[]>([])
 
   async function handleSignOut() {
     setSigningOut(true)
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/')
+  }
+
+  function openPanel(agent: Agent) {
+    setOpenPanels(prev => {
+      if (prev.some(p => p.id === agent.id)) {
+        // Already open — un-minimize
+        return prev.map(p => p.id === agent.id ? { ...p, minimized: false } : p)
+      }
+      // Add new panel, cap at 3
+      const next = [...prev, { id: agent.id, agent, minimized: false }]
+      return next.slice(-3)
+    })
+  }
+
+  function closePanel(agentId: string) {
+    setOpenPanels(prev => prev.filter(p => p.id !== agentId))
+  }
+
+  function toggleMinimize(agentId: string) {
+    setOpenPanels(prev => prev.map(p => p.id === agentId ? { ...p, minimized: !p.minimized } : p))
   }
 
   const filledCount = agents.length
@@ -239,11 +271,6 @@ export function HQView({ profile, agents }: HQViewProps) {
           </div>
 
           {/* ── Three domain columns with horizontal crossbar ───────────────── */}
-          {/*
-            grid-cols-3 (no gap) means each cell = exactly 1/3 of container.
-            Column centers are at 1/6, 3/6, 5/6 — so crossbar uses left/right = calc(100%/6).
-            Padding within each column gives cards their actual width.
-          */}
           <div className="relative grid grid-cols-3">
             {/* Horizontal crossbar connecting the three column stubs */}
             <div className="absolute top-0 h-px pointer-events-none"
@@ -251,13 +278,32 @@ export function HQView({ profile, agents }: HQViewProps) {
 
             {DOMAINS.map(domain => (
               <div key={domain} className="px-3">
-                <DomainColumn domain={domain} agents={agents} profile={profile} />
+                <DomainColumn domain={domain} agents={agents} profile={profile} onOpenChat={openPanel} />
               </div>
             ))}
           </div>
 
         </div>
       </main>
+
+      {/* ── Bottom chat dock ─────────────────────────────────────────────────── */}
+      {openPanels.length > 0 && (
+        <div
+          className="fixed bottom-0 right-4 flex items-end gap-2 z-50"
+          style={{ pointerEvents: 'none' }}
+        >
+          {[...openPanels].reverse().map(panel => (
+            <div key={panel.id} style={{ pointerEvents: 'auto' }}>
+              <AgentMiniChat
+                agent={panel.agent}
+                minimized={panel.minimized}
+                onToggleMinimize={() => toggleMinimize(panel.id)}
+                onClose={() => closePanel(panel.id)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
