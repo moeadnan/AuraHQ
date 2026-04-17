@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AgentWorkspace } from '@/components/workspace/AgentWorkspace'
-import type { Agent, MemoryItem, OutputCard } from '@/types'
+import type { Agent, MemoryItem, AgentWatch, AgentArtifact } from '@/types'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -18,6 +18,7 @@ const DEV_AGENT: Agent = {
   seed_answer_2: null,
   seed_answer_3: null,
   last_used_at: null,
+  status_text: null,
   position_index: 0,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
@@ -35,13 +36,22 @@ export default async function AgentPage({ params }: PageProps) {
         agent={DEV_AGENT}
         initialMemory={[]}
         initialCards={[]}
+        initialWatches={[]}
+        initialArtifacts={[]}
         userId="dev"
         googleConnected={false}
       />
     )
   }
 
-  const [{ data: agent }, { data: memory }, { data: convRows }, { data: googleConn }] = await Promise.all([
+  const [
+    { data: agent },
+    { data: memory },
+    { data: convRows },
+    { data: googleConn },
+    { data: watches },
+    { data: artifacts },
+  ] = await Promise.all([
     supabase
       .from('agents')
       .select('*')
@@ -69,6 +79,19 @@ export default async function AgentPage({ params }: PageProps) {
       .eq('user_id', user.id)
       .eq('provider', 'google')
       .maybeSingle(),
+    supabase
+      .from('agent_watches')
+      .select('*')
+      .eq('agent_id', id)
+      .eq('user_id', user.id)
+      .eq('resolved', false)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('agent_artifacts')
+      .select('*')
+      .eq('agent_id', id)
+      .eq('user_id', user.id),
   ])
 
   if (!agent) notFound()
@@ -77,7 +100,9 @@ export default async function AgentPage({ params }: PageProps) {
     <AgentWorkspace
       agent={agent as Agent}
       initialMemory={(memory ?? []) as MemoryItem[]}
-      initialCards={(convRows ?? []) as OutputCard[]}
+      initialCards={convRows ?? []}
+      initialWatches={(watches ?? []) as AgentWatch[]}
+      initialArtifacts={(artifacts ?? []) as AgentArtifact[]}
       userId={user.id}
       googleConnected={!!googleConn}
     />

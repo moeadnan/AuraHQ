@@ -1,4 +1,4 @@
-import { type AgentType, type MemoryItem } from '@/types'
+import { type AgentType, type MemoryItem, type AgentArtifact, type AgentWatch } from '@/types'
 import { getAgentDef } from './definitions'
 
 interface SystemPromptOptions {
@@ -7,6 +7,9 @@ interface SystemPromptOptions {
   purpose: string
   memory: MemoryItem[]
   capability: string
+  artifacts?: Pick<AgentArtifact, 'artifact_type' | 'content'>[]
+  watches?: Pick<AgentWatch, 'content'>[]
+  continuityContext?: string
 }
 
 function formatMemory(memory: MemoryItem[]): string {
@@ -15,13 +18,37 @@ function formatMemory(memory: MemoryItem[]): string {
   return `\n\nWhat you know about this person (from their own words and past sessions):\n${items}`
 }
 
+function formatArtifacts(artifacts: Pick<AgentArtifact, 'artifact_type' | 'content'>[]): string {
+  if (!artifacts || artifacts.length === 0) return ''
+  const sections = artifacts.map(a => {
+    const label =
+      a.artifact_type === 'voice_model' ? 'Voice model you maintain for this person' :
+      a.artifact_type === 'pattern_registry' ? 'Behavioral patterns you have named for this person' :
+      'Negotiation context you are tracking'
+    return `${label}:\n${a.content}`
+  })
+  return `\n\n${sections.join('\n\n')}`
+}
+
+function formatWatches(watches: Pick<AgentWatch, 'content'>[]): string {
+  if (!watches || watches.length === 0) return ''
+  const items = watches.map(w => `- ${w.content}`).join('\n')
+  return `\n\nThings you are actively watching (check whether these have moved when relevant):\n${items}`
+}
+
 export function buildSystemPrompt(opts: SystemPromptOptions): string {
-  const { agentType, agentName, purpose, memory, capability } = opts
+  const { agentType, agentName, purpose, memory, capability, artifacts = [], watches = [], continuityContext } = opts
   const def = getAgentDef(agentType)
   const memorySection = formatMemory(memory)
+  const artifactSection = formatArtifacts(artifacts)
+  const watchSection = formatWatches(watches)
 
   const domainContext = getDomainContext(agentType)
   const capabilityInstructions = getCapabilityInstructions(agentType, capability)
+
+  const continuitySection = continuityContext
+    ? `\n\nSession continuity: ${continuityContext}`
+    : ''
 
   return `You are ${agentName}, a personal AI agent in AURA HQ.
 
@@ -32,16 +59,17 @@ Your character: ${def.tagline}. Your energy is ${def.energyType.toLowerCase()}. 
 ${domainContext}
 
 ${capabilityInstructions}
-${memorySection}
+${memorySection}${artifactSection}${watchSection}${continuitySection}
 
 Response rules:
 - Be specific, not generic. Use what you know about this person.
 - Do not explain what you are or what you do. Just do it.
 - Do not start with affirmations ("Great question!", "Absolutely!", etc.)
-- Do not end with "Is there anything else?" 
+- Do not end with "Is there anything else?"
 - Format your response clearly. Use short paragraphs or structured sections where appropriate.
 - Match your energy type: ${def.energyType.toLowerCase()}. Be exactly that.
-- When memory items are present, reference them naturally — do not announce "Based on your memory, I know that..."
+- When memory or artifact context is present, reference it naturally — do not announce that you are using it.
+- When a watch item is relevant to what's being discussed, address it directly.
 - If you do not have enough context, ask one precise clarifying question before proceeding.`
 }
 

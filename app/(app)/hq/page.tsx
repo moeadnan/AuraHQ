@@ -24,9 +24,19 @@ export default async function HQPage() {
       .order('position_index', { ascending: true }),
   ])
 
+  // If no profile row yet (e.g. trigger didn't fire), upsert a minimal one so
+  // the name never falls back to the raw email address
+  if (!profile) {
+    const nameFromMeta = user.user_metadata?.name as string | undefined
+    await supabase.from('profiles').upsert({
+      id: user.id,
+      name: nameFromMeta ?? null,
+    })
+  }
+
   return (
     <HQView
-      profile={(profile ?? { id: user.id, name: user.email, avatar_url: null, onboarding_completed: false }) as Profile}
+      profile={(profile ?? { id: user.id, name: user.user_metadata?.name ?? null, avatar_url: null, onboarding_completed: false }) as Profile}
       agents={(agents ?? []) as Agent[]}
     />
   )

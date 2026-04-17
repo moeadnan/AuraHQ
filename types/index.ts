@@ -64,8 +64,27 @@ export interface Agent {
   seed_answer_2: string | null
   seed_answer_3: string | null
   last_used_at: string | null
+  status_text: string | null
   position_index: number
   created_at: string
+  updated_at: string
+}
+
+export interface AgentWatch {
+  id: string
+  agent_id: string
+  user_id: string
+  content: string
+  resolved: boolean
+  created_at: string
+}
+
+export interface AgentArtifact {
+  id: string
+  agent_id: string
+  user_id: string
+  artifact_type: 'voice_model' | 'pattern_registry' | 'negotiation_context'
+  content: string
   updated_at: string
 }
 

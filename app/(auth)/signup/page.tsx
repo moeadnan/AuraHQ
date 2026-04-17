@@ -33,10 +33,10 @@ export default function SignupPage() {
       return
     }
 
-    // Update profile name immediately
+    // Save name to profile — use upsert so it works regardless of trigger timing
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      await supabase.from('profiles').update({ name }).eq('id', user.id)
+      await supabase.from('profiles').upsert({ id: user.id, name })
     }
 
     router.push('/onboarding')

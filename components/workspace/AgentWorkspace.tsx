@@ -5,12 +5,16 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { AGENT_DEFINITIONS } from '@/lib/agents/definitions'
 import { AgentSignature } from '@/components/hq/AgentSignature'
-import type { Agent, MemoryItem, OutputCard } from '@/types'
+import type { Agent, MemoryItem, AgentWatch, AgentArtifact } from '@/types'
+
+type ConversationRow = { id: string; role: string; content: string; created_at: string }
 
 interface AgentWorkspaceProps {
   agent: Agent
   initialMemory: MemoryItem[]
-  initialCards: OutputCard[]
+  initialCards: ConversationRow[]
+  initialWatches: AgentWatch[]
+  initialArtifacts: AgentArtifact[]
   userId: string
   googleConnected: boolean
 }
@@ -27,6 +31,8 @@ type ChatMessage = {
   created_at: string
 }
 
+type DrawerTab = 'memory' | 'watching' | 'artifacts'
+
 function uid() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
@@ -34,8 +40,14 @@ function uid() {
 
 const TOOL_NEEDS_GOOGLE = new Set(['Dispatch', 'Manuscript'])
 
+// Artifact types that have a human-readable label
+const ARTIFACT_LABELS: Record<string, string> = {
+  voice_model: 'Voice model',
+  pattern_registry: 'Pattern registry',
+  negotiation_context: 'Negotiation context',
+}
+
 function MarkdownText({ text }: { text: string }) {
-  // Render **bold**, then newlines
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
   return (
     <>
@@ -53,29 +65,45 @@ function MarkdownText({ text }: { text: string }) {
   )
 }
 
+// Derive a session continuity label from conversation history
+function getContinuityLabel(messages: ChatMessage[]): string | null {
+  if (messages.length === 0) return null
+  const last = messages.at(-1)
+  if (!last) return null
+  const hoursAgo = (Date.now() - new Date(last.created_at).getTime()) / (1000 * 60 * 60)
+  if (hoursAgo < 6) return null
+  const daysAgo = Math.floor(hoursAgo / 24)
+  if (daysAgo === 0) return 'Continuing from earlier today'
+  if (daysAgo === 1) return 'Continuing from yesterday'
+  return `Continuing from ${daysAgo} days ago`
+}
+
 export function AgentWorkspace({
   agent,
   initialMemory,
   initialCards,
-  userId,
+  initialWatches,
+  initialArtifacts,
   googleConnected,
 }: AgentWorkspaceProps) {
   const def = AGENT_DEFINITIONS[agent.agent_type]
 
-  // Hydrate messages from conversation rows (id, role, content, created_at)
   const [messages, setMessages] = useState<ChatMessage[]>(
-    (initialCards as unknown as Array<{ id: string; role: string; content: string; created_at: string }>)
+    initialCards
       .filter(r => r.role === 'user' || r.role === 'assistant')
       .map(r => ({ id: r.id, role: r.role as 'user' | 'assistant', content: r.content, created_at: r.created_at }))
   )
   const [memory, setMemory] = useState<MemoryItem[]>(initialMemory)
+  const [watches, setWatches] = useState<AgentWatch[]>(initialWatches)
+  const [artifacts] = useState<AgentArtifact[]>(initialArtifacts)
   const [activeCapability, setActiveCapability] = useState<string | null>(null)
   const [userInput, setUserInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [liveSteps, setLiveSteps] = useState<ToolStep[]>([])
   const [streamingContent, setStreamingContent] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [memoryOpen, setMemoryOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerTab, setDrawerTab] = useState<DrawerTab>('memory')
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -84,6 +112,15 @@ export function AgentWorkspace({
 
   const needsGoogle = TOOL_NEEDS_GOOGLE.has(agent.agent_type)
   const showConnectBanner = needsGoogle && !isGoogleConnected
+
+  const continuityLabel = getContinuityLabel(messages)
+
+  // Drawer tab counts
+  const drawerCounts = {
+    memory: memory.length,
+    watching: watches.length,
+    artifacts: artifacts.length,
+  }
 
   async function getAuthHeader(): Promise<Record<string, string>> {
     const { data: { session } } = await createClient().auth.getSession()
@@ -107,15 +144,6 @@ export function AgentWorkspace({
     } catch { /* ignore */ }
   }
 
-  // Mark agent as recently used
-  useEffect(() => {
-    createClient()
-      .from('agents')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('id', agent.id)
-      .then(() => {})
-  }, [agent.id])
-
   // Auto-scroll to bottom on new content
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -132,6 +160,7 @@ export function AgentWorkspace({
 
     const userMsg: ChatMessage = {
       id: uid(),
+      role: 'user',
       content: text,
       created_at: new Date().toISOString(),
     }
@@ -144,7 +173,7 @@ export function AgentWorkspace({
 
     try {
       const { data: { session } } = await createClient().auth.getSession()
-      const authHeader = session?.access_token
+      const authHeader: Record<string, string> = session?.access_token
         ? { 'Authorization': `Bearer ${session.access_token}` }
         : {}
 
@@ -183,8 +212,8 @@ export function AgentWorkspace({
             setLiveSteps(prev => {
               const next = [...prev]
               const idx = next.findLastIndex(s => s.kind === 'tool_start' && (s as { tool: string }).tool === evt!.tool)
-              if (idx >= 0) next[idx] = { kind: 'tool_done', tool: evt!.tool, text: evt!.text }
-              else next.push({ kind: 'tool_done', tool: evt!.tool, text: evt!.text })
+              if (idx >= 0) next[idx] = { kind: 'tool_done', tool: evt!.tool, text: evt!.tool }
+              else next.push({ kind: 'tool_done', tool: evt!.tool, text: evt!.tool })
               return next
             })
           } else if (evt.type === 'delta') {
@@ -219,6 +248,11 @@ export function AgentWorkspace({
   async function deleteMemoryItem(itemId: string) {
     await createClient().from('memory_items').delete().eq('id', itemId)
     setMemory(prev => prev.filter(m => m.id !== itemId))
+  }
+
+  async function resolveWatch(watchId: string) {
+    await createClient().from('agent_watches').update({ resolved: true }).eq('id', watchId)
+    setWatches(prev => prev.filter(w => w.id !== watchId))
   }
 
   const activeCapDef = def.capabilities.find(c => c.key === activeCapability)
@@ -266,37 +300,114 @@ export function AgentWorkspace({
               Gmail ○
             </button>
           )}
+          {/* Unified context drawer button — shows dot if any watches exist */}
           <button
-            onClick={() => setMemoryOpen(o => !o)}
-            className="text-xs px-2.5 py-1 rounded"
+            onClick={() => setDrawerOpen(o => !o)}
+            className="text-xs px-2.5 py-1 rounded flex items-center gap-1"
             style={{
-              color: memoryOpen ? 'var(--color-principal)' : 'rgba(255,255,255,0.38)',
-              background: memoryOpen ? 'rgba(200,146,42,0.12)' : 'transparent',
+              color: drawerOpen ? 'var(--color-principal)' : 'rgba(255,255,255,0.38)',
+              background: drawerOpen ? 'rgba(200,146,42,0.12)' : 'transparent',
               border: 'none', cursor: 'pointer',
             }}
           >
-            Memory · {memory.length}
+            Context
+            {watches.length > 0 && (
+              <span
+                className="w-1.5 h-1.5 rounded-full inline-block"
+                style={{ background: 'var(--color-principal)' }}
+              />
+            )}
           </button>
         </div>
       </header>
 
-      {/* Memory drawer */}
-      {memoryOpen && (
-        <div className="flex-shrink-0 border-b" style={{ background: 'var(--color-chrome-deep)', borderColor: 'var(--color-chrome-border)' }}>
-          <div className="px-5 py-3 max-h-48 overflow-y-auto">
-            {memory.length === 0 ? (
-              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.38)' }}>No memory yet.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {memory.map(item => (
-                  <div key={item.id} className="flex items-start justify-between gap-3">
-                    <p className="text-xs flex-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>{item.content}</p>
-                    <button onClick={() => deleteMemoryItem(item.id)} className="text-xs flex-shrink-0"
-                      style={{ color: 'rgba(255,255,255,0.28)', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+      {/* Context drawer — tabbed: Memory / Watching / Artifacts */}
+      {drawerOpen && (
+        <div
+          className="flex-shrink-0 border-b"
+          style={{ background: 'var(--color-chrome-deep)', borderColor: 'var(--color-chrome-border)' }}
+        >
+          {/* Drawer tab bar */}
+          <div className="flex px-5 pt-2 gap-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            {(['memory', 'watching', 'artifacts'] as DrawerTab[]).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setDrawerTab(tab)}
+                className="text-xs pb-2 capitalize"
+                style={{
+                  color: drawerTab === tab ? 'var(--color-principal)' : 'rgba(255,255,255,0.35)',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  borderBottom: drawerTab === tab ? '1.5px solid var(--color-principal)' : '1.5px solid transparent',
+                  fontWeight: drawerTab === tab ? 500 : 400,
+                }}
+              >
+                {tab} {drawerCounts[tab] > 0 && <span style={{ opacity: 0.6 }}>· {drawerCounts[tab]}</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Drawer content */}
+          <div className="px-5 py-3 max-h-44 overflow-y-auto">
+
+            {drawerTab === 'memory' && (
+              memory.length === 0
+                ? <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>No memory yet. Builds automatically from your sessions.</p>
+                : <div className="space-y-1.5">
+                    {memory.map(item => (
+                      <div key={item.id} className="flex items-start justify-between gap-3">
+                        <p className="text-xs flex-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                          {item.content}
+                          {item.source === 'auto' && (
+                            <span className="ml-1.5 text-xs" style={{ color: 'rgba(255,255,255,0.2)', fontStyle: 'italic' }}>auto</span>
+                          )}
+                        </p>
+                        <button onClick={() => deleteMemoryItem(item.id)} className="text-xs flex-shrink-0"
+                          style={{ color: 'rgba(255,255,255,0.2)', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
             )}
+
+            {drawerTab === 'watching' && (
+              watches.length === 0
+                ? <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>No active watches. Set when the agent flags something to track.</p>
+                : <div className="space-y-2">
+                    {watches.map(watch => (
+                      <div key={watch.id} className="flex items-start gap-2">
+                        <span style={{ color: 'var(--color-principal)', fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>◎</span>
+                        <p className="text-xs flex-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                          {watch.content}
+                        </p>
+                        <button
+                          onClick={() => resolveWatch(watch.id)}
+                          className="text-xs flex-shrink-0 px-1.5 py-0.5 rounded"
+                          style={{ color: 'rgba(255,255,255,0.3)', background: 'none', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
+                          title="Mark resolved"
+                        >
+                          ✓
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+            )}
+
+            {drawerTab === 'artifacts' && (
+              artifacts.length === 0
+                ? <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>No artifacts yet. Builds from voice checks, named patterns, and negotiation prep.</p>
+                : <div className="space-y-3">
+                    {artifacts.map(artifact => (
+                      <div key={artifact.id}>
+                        <p className="text-xs font-medium mb-1" style={{ color: 'var(--color-principal)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '10px' }}>
+                          {ARTIFACT_LABELS[artifact.artifact_type] ?? artifact.artifact_type}
+                        </p>
+                        <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                          {artifact.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+            )}
+
           </div>
         </div>
       )}
@@ -308,7 +419,7 @@ export function AgentWorkspace({
           style={{ background: 'rgba(200,146,42,0.07)', border: '1px solid rgba(200,146,42,0.22)' }}
         >
           <p className="text-xs" style={{ color: 'var(--color-secondary)' }}>
-            Connect Gmail to unlock {agent.name}'s full capabilities.
+            Connect Gmail to unlock {agent.name}&apos;s full capabilities.
           </p>
           <button
             onClick={connectGoogle}
@@ -323,15 +434,23 @@ export function AgentWorkspace({
       {/* Chat thread */}
       <div className="flex-1 overflow-y-auto px-4 py-5" style={{ scrollBehavior: 'smooth' }}>
 
-        {/* Agent introduction */}
+        {/* Agent introduction / continuity message */}
         <div className="flex items-end gap-2 mb-4">
           <div className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
             style={{ background: 'var(--color-chrome)' }}>
             <AgentSignature agentType={agent.agent_type} size={16} />
           </div>
-          <div className="max-w-sm px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed italic"
+          <div className="max-w-sm px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed"
             style={{ background: 'var(--color-surface)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-structural)' }}>
-            {agent.purpose}
+            {continuityLabel ? (
+              <>
+                <span className="not-italic">{continuityLabel}</span>
+                <span className="mx-2" style={{ color: 'var(--color-structural)' }}>·</span>
+                <span className="italic">{agent.purpose}</span>
+              </>
+            ) : (
+              <span className="italic">{agent.purpose}</span>
+            )}
           </div>
         </div>
 
@@ -405,7 +524,7 @@ export function AgentWorkspace({
               {streamingContent
                 ? <><MarkdownText text={streamingContent} /><span className="inline-block w-0.5 h-4 ml-0.5 align-middle animate-pulse" style={{ background: 'var(--color-principal)' }} /></>
                 : <span className="flex gap-1 items-center py-0.5">
-                    {[0,1,2].map(i => (
+                    {[0, 1, 2].map(i => (
                       <span key={i} className="w-1.5 h-1.5 rounded-full inline-block"
                         style={{ background: 'var(--color-principal)', opacity: 0.5, animation: `pulse 1.2s ${i * 0.2}s infinite` }} />
                     ))}

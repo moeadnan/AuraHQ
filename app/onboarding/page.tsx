@@ -117,15 +117,14 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    await supabase.from('profiles').upsert({
-      id: user.id,
+    await supabase.from('profiles').update({
       role,
       support_area: supportArea,
       capacity_answer: capacityAnswer,
       avatar_url: avatarUrl,
       onboarding_completed: true,
       subscription_status: 'trial',
-    })
+    }).eq('id', user.id)
 
     router.push('/hq')
   }
@@ -136,15 +135,14 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    await supabase.from('profiles').upsert({
-      id: user.id,
+    await supabase.from('profiles').update({
       role,
       support_area: supportArea,
       capacity_answer: capacityAnswer,
       avatar_url: avatarUrl,
       onboarding_completed: true,
       subscription_status: 'expired',
-    })
+    }).eq('id', user.id)
 
     router.push('/hq')
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -11,23 +11,23 @@ import { AgentMiniChat } from './AgentMiniChat'
 import { createClient } from '@/lib/supabase/client'
 import { DOMAINS, DOMAIN_AGENTS } from '@/lib/agents/definitions'
 
-// Agent-specific filter + frame shape so the same face reads differently per role
+// Frame shape per agent role — color filters removed, real image variants used instead
 const AGENT_STYLES: Record<AgentType, {
-  filter: string
   borderRadius: string
   borderColor: string
   shadow?: string
 }> = {
-  Manuscript: { filter: 'sepia(0.28) contrast(1.08) brightness(0.95)', borderRadius: '5px', borderColor: 'rgba(92,74,56,0.45)' },
-  Counsel:    { filter: 'grayscale(0.42) contrast(1.22) brightness(0.87)', borderRadius: '1px', borderColor: 'rgba(42,38,32,0.55)', shadow: '2px 2px 0 rgba(42,38,32,0.12)' },
-  Dispatch:   { filter: 'hue-rotate(6deg) saturate(0.78) contrast(1.05)', borderRadius: '7px 1px 7px 1px', borderColor: 'rgba(92,74,56,0.3)' },
-  Ledger:     { filter: 'sepia(0.18) hue-rotate(-5deg) saturate(1.22) brightness(1.03)', borderRadius: '50%', borderColor: 'rgba(184,118,42,0.55)', shadow: '0 0 0 3px rgba(184,118,42,0.1)' },
-  Horizon:    { filter: 'brightness(1.1) saturate(1.32)', borderRadius: '50% 50% 50% 4px', borderColor: 'rgba(204,170,106,0.65)', shadow: '0 4px 14px rgba(204,170,106,0.22)' },
-  Terms:      { filter: 'grayscale(0.52) contrast(1.18) brightness(0.89)', borderRadius: '0px', borderColor: 'rgba(42,38,32,0.5)', shadow: '3px 0 0 rgba(42,38,32,0.12)' },
-  Mirror:     { filter: 'hue-rotate(192deg) saturate(0.18) brightness(1.1) contrast(0.88)', borderRadius: '50%', borderColor: 'rgba(42,38,32,0.22)' },
-  Grain:      { filter: 'grayscale(0.68) contrast(1.12) brightness(0.84) sepia(0.08)', borderRadius: '3px', borderColor: 'rgba(138,126,114,0.45)' },
-  Meridian:   { filter: 'sepia(0.06) saturate(1.4) brightness(1.08)', borderRadius: '50%', borderColor: 'rgba(184,118,42,0.65)', shadow: '0 0 0 4px rgba(184,118,42,0.1), 0 0 0 8px rgba(184,118,42,0.04)' },
+  Manuscript: { borderRadius: '5px',              borderColor: 'rgba(92,74,56,0.45)' },
+  Counsel:    { borderRadius: '1px',              borderColor: 'rgba(42,38,32,0.55)',  shadow: '2px 2px 0 rgba(42,38,32,0.12)' },
+  Dispatch:   { borderRadius: '7px 1px 7px 1px', borderColor: 'rgba(92,74,56,0.3)' },
+  Ledger:     { borderRadius: '50%',              borderColor: 'rgba(184,118,42,0.55)', shadow: '0 0 0 3px rgba(184,118,42,0.1)' },
+  Horizon:    { borderRadius: '50% 50% 50% 4px', borderColor: 'rgba(204,170,106,0.65)', shadow: '0 4px 14px rgba(204,170,106,0.22)' },
+  Terms:      { borderRadius: '0px',              borderColor: 'rgba(42,38,32,0.5)',   shadow: '3px 0 0 rgba(42,38,32,0.12)' },
+  Mirror:     { borderRadius: '50%',              borderColor: 'rgba(42,38,32,0.22)' },
+  Grain:      { borderRadius: '3px',              borderColor: 'rgba(138,126,114,0.45)' },
+  Meridian:   { borderRadius: '50%',              borderColor: 'rgba(184,118,42,0.65)', shadow: '0 0 0 4px rgba(184,118,42,0.1), 0 0 0 8px rgba(184,118,42,0.04)' },
 }
+
 
 const DOMAIN_META: Record<string, { short: string; label: string; color: string }> = {
   'Work':            { short: 'WORK',   label: 'Work',   color: 'var(--color-secondary)' },
@@ -42,13 +42,27 @@ interface HQViewProps {
   agents: Agent[]
 }
 
-// ── Styled avatar with per-role filter + frame shape ─────────────────────────
-function StyledAvatar({ avatarUrl, name, agentType }: {
+// ── Styled avatar — loads per-agent variant, falls back to base avatar ────────
+function StyledAvatar({ avatarUrl, name, agentType, userId }: {
   avatarUrl: string | null
   name: string
   agentType: AgentType
+  userId: string
 }) {
   const s = AGENT_STYLES[agentType]
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  // Each agent type has its own variant: avatar_manuscript.png, avatar_counsel.png, etc.
+  const variantUrl = supabaseUrl && userId
+    ? `${supabaseUrl}/storage/v1/object/public/avatars/${userId}/avatar_${agentType.toLowerCase()}.png`
+    : avatarUrl
+
+  const [imgSrc, setImgSrc] = useState<string | null>(variantUrl ?? avatarUrl)
+
+  useEffect(() => {
+    setImgSrc(variantUrl ?? avatarUrl)
+  }, [variantUrl, avatarUrl])
+
   return (
     <div
       className="relative overflow-hidden flex-shrink-0"
@@ -60,14 +74,18 @@ function StyledAvatar({ avatarUrl, name, agentType }: {
         boxShadow: s.shadow,
       }}
     >
-      {avatarUrl ? (
-        <div style={{ filter: s.filter, position: 'absolute', inset: 0 }}>
-          <Image src={avatarUrl} alt={name} fill className="object-cover" unoptimized />
-        </div>
+      {imgSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imgSrc}
+          alt={name}
+          onError={() => setImgSrc(avatarUrl)}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       ) : (
         <div
           className="absolute inset-0 flex items-center justify-center font-display font-light"
-          style={{ background: 'var(--color-structural)', color: 'var(--color-principal)', filter: s.filter, fontSize: '24px' }}
+          style={{ background: 'var(--color-structural)', color: 'var(--color-principal)', fontSize: '24px' }}
         >
           {name?.[0]?.toUpperCase() || '◈'}
         </div>
@@ -93,15 +111,21 @@ function FilledCard({ agent, profile, onOpenChat }: { agent: Agent; profile: Pro
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-structural)', boxShadow: 'var(--shadow-surface)' }}
       >
         <div className="transition-transform duration-200 group-hover:scale-[1.03]">
-          <StyledAvatar avatarUrl={profile.avatar_url} name={profile.name || 'You'} agentType={agent.agent_type} />
+          <StyledAvatar avatarUrl={profile.avatar_url} name={profile.name || 'You'} agentType={agent.agent_type} userId={profile.id} />
         </div>
         <p className="text-center leading-tight mt-2 font-medium truncate w-full"
           style={{ color: 'var(--color-text-primary)', fontSize: '12px' }}>
           {agent.name}
         </p>
-        <div className="flex items-center gap-1 mt-1">
+        <div className="flex items-center gap-1 mt-1 w-full justify-center">
           <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dotColor }} />
-          <p style={{ color: 'var(--color-text-tertiary)', fontSize: '10px' }}>{relativeTime(agent.last_used_at)}</p>
+          {agent.status_text ? (
+            <p className="truncate text-center" style={{ color: 'var(--color-text-tertiary)', fontSize: '10px' }}>
+              {agent.status_text}
+            </p>
+          ) : (
+            <p style={{ color: 'var(--color-text-tertiary)', fontSize: '10px' }}>{relativeTime(agent.last_used_at)}</p>
+          )}
         </div>
       </div>
       {/* Hover shortcut to full workspace */}

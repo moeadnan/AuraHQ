@@ -17,6 +17,7 @@ const DEV_AGENT: Agent = {
   seed_answer_1: null,
   seed_answer_2: null,
   seed_answer_3: null,
+  status_text: null,
   last_used_at: null,
   position_index: 0,
   created_at: new Date().toISOString(),
